@@ -1,0 +1,234 @@
+package com.instaclone.post;
+
+import java.time.Instant;
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface PostRepository extends JpaRepository<Post, Long> {
+
+    @Query("select p.id from Post p where p.user.id = :userId")
+    List<Long> findIdsByUserId(@Param("userId") Long userId);
+
+    @Query("select coalesce(sum(p.likeCount), 0) from Post p where p.user.id = :userId")
+    long sumLikeCountByUserId(@Param("userId") Long userId);
+
+    @Query("select coalesce(sum(p.commentCount), 0) from Post p where p.user.id = :userId")
+    long sumCommentCountByUserId(@Param("userId") Long userId);
+
+    // Atomic SQL increments/decrements, not read-modify-write on the entity — two concurrent
+    // likes/comments both reading like_count=5 and writing 6 would otherwise lose one update.
+    @Modifying
+    @Query("update Post p set p.likeCount = p.likeCount + 1 where p.id = :postId")
+    void incrementLikeCount(@Param("postId") Long postId);
+
+    @Modifying
+    @Query("update Post p set p.likeCount = case when p.likeCount > 0 then p.likeCount - 1 else 0 end where p.id = :postId")
+    void decrementLikeCount(@Param("postId") Long postId);
+
+    @Modifying
+    @Query("update Post p set p.commentCount = p.commentCount + 1 where p.id = :postId")
+    void incrementCommentCount(@Param("postId") Long postId);
+
+    @Modifying
+    @Query(
+            "update Post p set p.commentCount = case when p.commentCount > :amount then p.commentCount - :amount else 0 end "
+                    + "where p.id = :postId")
+    void decrementCommentCountBy(@Param("postId") Long postId, @Param("amount") long amount);
+
+    // "type != 'REEL' OR media is READY" — a still-transcoding reel has no playable url yet, so it
+    // must stay out of every listing until the async worker flips its media row to READY. Photos
+    // (never REEL) are unaffected and always pass this check. Two copies (unaliased "posts" table
+    // vs. aliased "p") because annotation values must be compile-time constants, so this can't be
+    // built with a runtime String.replace() call.
+    String READY_FILTER = "(type != 'REEL' OR EXISTS (SELECT 1 FROM media m WHERE m.post_id = posts.id AND m.status = 'READY'))";
+    String READY_FILTER_P = "(p.type != 'REEL' OR EXISTS (SELECT 1 FROM media m WHERE m.post_id = p.id AND m.status = 'READY'))";
+
+    // Must respect READY_FILTER like every grid/feed query — otherwise a still-transcoding or
+    // failed reel inflates the publicly-shown post count without ever rendering a tile anywhere.
+    @Query(value = "SELECT COUNT(*) FROM posts WHERE user_id = :userId AND " + READY_FILTER, nativeQuery = true)
+    long countByUserId(@Param("userId") Long userId);
+
+    @Query(
+            value = "SELECT * FROM posts WHERE user_id = :userId AND " + READY_FILTER
+                    + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findFirstPageByUserId(@Param("userId") Long userId, @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT * FROM posts WHERE user_id = :userId AND (created_at, id) < (:cursorCreatedAt, :cursorId) "
+                            + "AND " + READY_FILTER + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findPageByUserIdAfterCursor(
+            @Param("userId") Long userId,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // No READY_FILTER — used only for a user viewing their OWN profile grid, where a still-
+    // transcoding or failed reel should still show up (so it's at least discoverable/deletable)
+    // instead of being invisible even to its own uploader.
+    @Query(
+            value = "SELECT * FROM posts WHERE user_id = :userId ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findFirstPageByUserIdIncludingPending(@Param("userId") Long userId, @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT * FROM posts WHERE user_id = :userId AND (created_at, id) < (:cursorCreatedAt, :cursorId) "
+                            + "ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findPageByUserIdAfterCursorIncludingPending(
+            @Param("userId") Long userId,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // excludedPostIds (reported posts/authors, see FeedService) is filtered here in the query
+    // itself, not after the fetch, so the limit+1 lookahead CursorPage.of relies on to compute
+    // hasMore stays accurate — filtering after the fetch could shrink a full lookahead window down
+    // to <= limit and make a feed with more pages look like it had reached the end.
+    @Query(
+            value = "SELECT * FROM posts WHERE user_id IN (:userIds) AND id NOT IN (:excludedPostIds) AND "
+                    + READY_FILTER
+                    + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findFirstPageByUserIds(
+            @Param("userIds") List<Long> userIds,
+            @Param("excludedPostIds") List<Long> excludedPostIds,
+            @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT * FROM posts WHERE user_id IN (:userIds) AND id NOT IN (:excludedPostIds) "
+                            + "AND (created_at, id) < (:cursorCreatedAt, :cursorId) "
+                            + "AND " + READY_FILTER + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findPageByUserIdsAfterCursor(
+            @Param("userIds") List<Long> userIds,
+            @Param("excludedPostIds") List<Long> excludedPostIds,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    @Query(
+            value = "SELECT * FROM posts WHERE user_id IN (:userIds) AND type = 'REEL' AND " + READY_FILTER
+                    + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findFirstReelsPageByUserIds(@Param("userIds") List<Long> userIds, @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT * FROM posts WHERE user_id IN (:userIds) AND type = 'REEL' "
+                            + "AND (created_at, id) < (:cursorCreatedAt, :cursorId) AND " + READY_FILTER
+                            + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findReelsPageByUserIdsAfterCursor(
+            @Param("userIds") List<Long> userIds,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // Explore: public accounts only (never a private account regardless of follow state), excluding
+    // the viewer and anyone they already follow, ranked by like_count over the trailing window.
+    // excludedIds must always include the viewer's own id (see FeedService) so this NOT IN never
+    // receives an empty list, which native Postgres rejects as invalid syntax.
+    @Query(
+            value =
+                    "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                            + "WHERE u.is_private = false AND p.user_id NOT IN (:excludedIds) "
+                            + "AND p.id NOT IN (:excludedPostIds) "
+                            + "AND p.created_at > :since AND "
+                            + READY_FILTER_P
+                            + " ORDER BY p.like_count DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findExploreFirstPage(
+            @Param("excludedIds") List<Long> excludedIds,
+            @Param("excludedPostIds") List<Long> excludedPostIds,
+            @Param("since") Instant since,
+            @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                            + "WHERE u.is_private = false AND p.user_id NOT IN (:excludedIds) "
+                            + "AND p.id NOT IN (:excludedPostIds) "
+                            + "AND p.created_at > :since AND (p.like_count, p.id) < (:cursorRank, :cursorId) AND "
+                            + READY_FILTER_P
+                            + " ORDER BY p.like_count DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findExploreAfterCursor(
+            @Param("excludedIds") List<Long> excludedIds,
+            @Param("excludedPostIds") List<Long> excludedPostIds,
+            @Param("since") Instant since,
+            @Param("cursorRank") long cursorRank,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // Browsing a hashtag is a discovery surface like explore — same rule: public accounts only,
+    // regardless of follow state, not just "posts I'm allowed to see." excludedIds must always
+    // include the viewer's own id (see PostService) so this NOT IN never receives an empty list,
+    // which native Postgres rejects as invalid syntax.
+    @Query(
+            value =
+                    "SELECT p.* FROM posts p JOIN post_hashtags ph ON ph.post_id = p.id "
+                            + "JOIN hashtags h ON h.id = ph.hashtag_id JOIN users u ON u.id = p.user_id "
+                            + "WHERE h.tag = :tag AND u.is_private = false AND p.user_id NOT IN (:excludedIds) AND "
+                            + READY_FILTER_P
+                            + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findFirstPageByHashtag(
+            @Param("tag") String tag, @Param("excludedIds") List<Long> excludedIds, @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT p.* FROM posts p JOIN post_hashtags ph ON ph.post_id = p.id "
+                            + "JOIN hashtags h ON h.id = ph.hashtag_id JOIN users u ON u.id = p.user_id "
+                            + "WHERE h.tag = :tag AND u.is_private = false AND p.user_id NOT IN (:excludedIds) "
+                            + "AND (p.created_at, p.id) < (:cursorCreatedAt, :cursorId) AND " + READY_FILTER_P
+                            + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findPageByHashtagAfterCursor(
+            @Param("tag") String tag,
+            @Param("excludedIds") List<Long> excludedIds,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // Plain ILIKE search over caption/author username/hashtag tag (replaces the old Meilisearch-
+    // backed lookup). Same discovery-surface rule as explore/hashtag browsing: public accounts
+    // only, regardless of follow state, and the usual READY_FILTER_P so a still-transcoding reel
+    // never surfaces. DISTINCT because the hashtag join can otherwise return a post once per
+    // matching tag. excludedIds always includes the viewer's own id (see SearchService) so NOT IN
+    // never receives an empty list.
+    @Query(
+            value = "SELECT DISTINCT p.* FROM posts p "
+                    + "JOIN users u ON u.id = p.user_id "
+                    + "LEFT JOIN post_hashtags ph ON ph.post_id = p.id "
+                    + "LEFT JOIN hashtags h ON h.id = ph.hashtag_id "
+                    + "WHERE u.is_private = false AND p.user_id NOT IN (:excludedIds) "
+                    + "AND (p.caption ILIKE :pattern OR u.username ILIKE :pattern OR h.tag ILIKE :tagPattern) "
+                    + "AND " + READY_FILTER_P
+                    + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> searchByCaptionOrAuthorOrHashtag(
+            @Param("pattern") String pattern,
+            @Param("tagPattern") String tagPattern,
+            @Param("excludedIds") List<Long> excludedIds,
+            @Param("limit") int limit);
+
+    default List<Post> searchByQuery(String query, List<Long> excludedIds, int limit) {
+        String trimmed = query == null ? "" : query.trim();
+        if (trimmed.isEmpty()) {
+            return List.of();
+        }
+        String pattern = "%" + trimmed + "%";
+        // Hashtags are stored lowercase, without the leading '#' (see HashtagService) — strip it
+        // from the query too, so searching either "sunset" or "#sunset" matches the same tag.
+        String tagPattern = "%" + (trimmed.startsWith("#") ? trimmed.substring(1) : trimmed) + "%";
+        return searchByCaptionOrAuthorOrHashtag(pattern, tagPattern, excludedIds, limit);
+    }
+}

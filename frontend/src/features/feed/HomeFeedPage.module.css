@@ -1,0 +1,32 @@
+.page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+}
+
+.column {
+  width: 100%;
+  max-width: var(--content-max-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--color-text-secondary);
+}
+
+.sentinel {
+  height: 1px;
+}
+
+.skeleton {
+  width: 100%;
+  max-width: var(--content-max-width);
+  height: 500px;
+  background: var(--color-skeleton);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}

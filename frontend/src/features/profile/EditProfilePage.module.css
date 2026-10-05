@@ -1,0 +1,109 @@
+.page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-6);
+}
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.avatarMeta {
+  display: flex;
+  flex-direction: column;
+}
+
+.username {
+  font-weight: var(--font-weight-semibold);
+}
+
+.changePhotoButton {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.field {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  margin-bottom: var(--space-5);
+}
+
+.fieldLabel {
+  width: 100px;
+  text-align: right;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  padding-top: var(--space-2);
+}
+
+.fieldInputWrapper {
+  flex: 1;
+}
+
+.textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  resize: none;
+  min-height: 80px;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggleDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.switchOn {
+  background: var(--color-accent);
+}
+
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: #fff;
+  transition: transform var(--transition-fast);
+}
+
+.switchKnobOn {
+  transform: translateX(18px);
+}
+
+.successText {
+  color: #2f9e44;
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-3);
+}

@@ -1,0 +1,68 @@
+# Render Blueprint — lets you spin up the backend (+ a managed Redis-compatible Key Value store)
+# with "New -> Blueprint" in the Render dashboard, pointed at this repo.
+#
+# Not included here (bring your own, both are external to Render): Neon Postgres and Cloudflare
+# R2. Create those first, then fill in their values as this service's environment variables
+# (either below as `sync: false` placeholders you fill in on the dashboard, or directly as secrets).
+#
+# The frontend (frontend/) is a separate Render Static Site: New -> Static Site, root directory
+# "frontend", build command "npm run build", publish directory "dist". Set VITE_API_BASE_URL and
+# VITE_WS_URL there to this service's https URL (see frontend/.env.prod).
+
+services:
+  - type: web
+    name: gram-insta-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/v1/actuator/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: gram-insta-redis
+          property: connectionString
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: APP_JWT_COOKIE_SECURE
+        value: "true"
+      - key: APP_BASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_ADDRESS
+        sync: false
+      - key: SPRINGDOC_SWAGGER_UI_ENABLED
+        value: "false"
+      - key: SPRINGDOC_API_DOCS_ENABLED
+        value: "false"
+      - key: LOGGING_LEVEL_COM_INSTACLONE
+        value: INFO
+      - key: LOGGING_LEVEL_ORG_HIBERNATE_SQL
+        value: WARN
+      - key: LOGGING_LEVEL_ORG_HIBERNATE_ORM_JDBC_BIND
+        value: WARN
+      - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+        value: WARN
+
+  - type: keyvalue
+    name: gram-insta-redis
+    plan: starter
+    ipAllowList: []

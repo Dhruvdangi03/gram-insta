@@ -1,0 +1,71 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.replyRow {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.replies {
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-border);
+}
+
+.replyButton {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.text {
+  font-size: var(--font-size-sm);
+  word-wrap: break-word;
+}
+
+.username {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: var(--font-weight-semibold);
+  margin-right: var(--space-1);
+}
+
+.verifiedBadge {
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.timestamp,
+.likeCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: var(--space-6);
+  font-size: var(--font-size-sm);
+}
+
+.sentinel {
+  height: 1px;
+}

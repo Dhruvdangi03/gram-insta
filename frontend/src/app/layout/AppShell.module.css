@@ -1,0 +1,38 @@
+.shell {
+  display: flex;
+}
+
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-width-collapsed);
+  min-height: 100vh;
+  /* min-width: 0 stops a flex item from refusing to shrink below its content's natural width —
+     without it, a wide child (e.g. the reels player) can force .main back to row-sibling sizing. */
+  min-width: 0;
+}
+
+@media (min-width: 1264px) {
+  .main {
+    margin-left: var(--sidebar-width-expanded);
+  }
+}
+
+@media (max-width: 734px) {
+  /* MobileTopBar and MobileTabBar are meant to stack above/below the page, not sit beside it —
+     but .shell's default flex-direction is row (built for the desktop Sidebar | Main layout).
+     MobileTopBar's position:sticky keeps it in normal flex flow (unlike Sidebar, which is
+     position:fixed and so never participates in this regardless of direction), so as a row
+     sibling it was taking its own intrinsic content width and squeezing .main into whatever
+     width was left over, offset to the right — a real bug caught live via getBoundingClientRect
+     (.main measured ~155px wide at a 375px viewport instead of full width). Column stacking on
+     mobile is what was actually intended.
+  */
+  .shell {
+    flex-direction: column;
+  }
+
+  .main {
+    margin-left: 0;
+    padding-bottom: var(--bottom-tabbar-height);
+  }
+}

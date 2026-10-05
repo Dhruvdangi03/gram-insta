@@ -1,0 +1,115 @@
+server:
+  # Render injects PORT at runtime for web services; 8080 is just the local-dev default.
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: insta-clone
+  datasource:
+    # Neon everywhere — local dev and Render both point at the same (or a separate dev-branch)
+    # Neon Postgres connection string. Set these as real environment variables (see .env.example);
+    # Spring Boot does not read a .env file on its own, so export them before running the app, e.g.
+    #   set -a; source .env; set +a; ./mvnw spring-boot:run
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      # Neon (and most managed Postgres free/hobby tiers) caps concurrent connections hard — a
+      # small pool with a bounded lifetime avoids exhausting it and plays well with Neon's
+      # connection-pooler-in-front-of-Postgres (pgbouncer) idle-connection recycling.
+      maximum-pool-size: ${DATABASE_POOL_SIZE:5}
+      max-lifetime: 240000
+  data:
+    redis:
+      # Render Key Value (Valkey/Redis-compatible) hands you one connection string
+      # (rediss://... with the password and TLS already encoded) — spring.data.redis.url parses
+      # scheme/host/port/user/password/ssl from it directly, no separate host/port/password props.
+      url: ${REDIS_URL:redis://localhost:6379}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        # Batches lazy collection loads (e.g. Conversation.participants) into one IN-query per
+        # batch instead of one query per parent row — avoids N+1 without touching call sites.
+        default_batch_fetch_size: 25
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+app:
+  rate-limit:
+    auth:
+      # See AuthRateLimitFilter — disabled in the integration tests that register many accounts
+      # from the same host in one run.
+      enabled: true
+  jwt:
+    access-token-ttl: PT15M
+    refresh-token-ttl: P30D
+    # Set to true once the app is reached only over HTTPS (Render terminates TLS for you) —
+    # false lets the refresh-token cookie still work over plain http://localhost for local dev.
+    cookie-secure: ${APP_JWT_COOKIE_SECURE:false}
+  storage:
+    # Cloudflare R2 (S3-compatible) — same account-scoped endpoint for local dev and production;
+    # there's no free local stand-in needed since R2's free tier covers dev usage.
+    # endpoint: https://<account-id>.r2.cloudflarestorage.com
+    endpoint: ${R2_ENDPOINT}
+    region: auto
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket: ${R2_BUCKET}
+    # The host embedded in presigned upload URLs handed back to clients, and in the public media
+    # URLs stored on posts — R2's public bucket URL (r2.dev) or a custom domain you've mapped to
+    # the bucket. Deliberately separate from `endpoint`: R2's account-scoped S3 endpoint above is
+    # not itself publicly browsable.
+    public-base-url: ${R2_PUBLIC_URL}
+    # R2 buckets are created once via the Cloudflare dashboard/API, not auto-created by the app —
+    # R2's S3-compatible CreateBucket call behaves differently enough from AWS S3 that relying on
+    # it here isn't worth it.
+    auto-create-bucket: false
+  stories:
+    default-ttl: PT24H
+    max-ttl: PT24H
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  email:
+    # Unset by default — EmailConfig falls back to logging the email instead of sending it (see
+    # LoggingEmailService). Set RESEND_API_KEY to send real password-reset emails via Resend
+    # (resend.com); RESEND_FROM_ADDRESS must be a verified sender/domain on that account.
+    resend-api-key: ${RESEND_API_KEY:}
+    from-address: ${RESEND_FROM_ADDRESS:onboarding@resend.dev}
+    app-base-url: ${APP_BASE_URL:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:true}
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
+
+# Verbose on purpose for local testing: SQL + bound parameters, and Spring Security's own
+# authorization decisions, on top of the request-in/request-out lines from RequestLoggingFilter.
+# Dial these down (see application-render.yml, applied via SPRING_PROFILES_ACTIVE=render on the
+# deployed service) rather than here — passwords never get logged either way (RequestLoggingFilter
+# and the auth endpoints deliberately never log bodies), but this much detail isn't something you
+# want in a shared/deployed environment's logs.
+logging:
+  pattern:
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{requestId:-        }]){yellow} %clr(---){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
+  level:
+    com.instaclone: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.security: DEBUG

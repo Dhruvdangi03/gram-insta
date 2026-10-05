@@ -1,0 +1,100 @@
+.header {
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-4);
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+}
+
+.avatarColumn {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  width: 150px;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.username {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-regular);
+}
+
+.verifiedBadge {
+  flex-shrink: 0;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.settingsButton {
+  color: var(--color-text-primary);
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-6);
+  margin-bottom: var(--space-5);
+  list-style: none;
+}
+
+.statCount {
+  font-weight: var(--font-weight-semibold);
+  margin-right: var(--space-1);
+}
+
+.fullName {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.bio {
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+@media (max-width: 734px) {
+  .header {
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .avatarColumn {
+    width: auto;
+  }
+
+  /* Avatar sets its pixel size via inline style (a numeric size= prop, not CSS), which beats a
+     plain class selector in specificity — !important is the only way to shrink it responsively
+     without changing Avatar's API. Caught live: at 375px the 150px desktop avatar left too little
+     room for the stats row, clipping "following" off the right edge of the viewport. */
+  .avatar {
+    width: 77px !important;
+    height: 77px !important;
+  }
+
+  .topRow {
+    gap: var(--space-3);
+  }
+
+  .stats {
+    gap: var(--space-4);
+  }
+}
+

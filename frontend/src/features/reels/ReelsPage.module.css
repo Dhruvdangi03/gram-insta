@@ -1,0 +1,24 @@
+.container {
+  height: calc(100vh - 0px);
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 734px) {
+  .container {
+    height: calc(100vh - var(--topbar-height) - var(--bottom-tabbar-height));
+  }
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}

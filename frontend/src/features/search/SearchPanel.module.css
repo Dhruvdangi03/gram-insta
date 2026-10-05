@@ -1,0 +1,124 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: var(--sidebar-width-collapsed);
+  width: 397px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  z-index: 91;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-modal);
+}
+
+@media (max-width: 734px) {
+  .panel {
+    left: 0;
+    width: 100%;
+  }
+}
+
+.header {
+  padding: var(--space-6) var(--space-5) var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-4);
+}
+
+.inputWrapper {
+  position: relative;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+}
+
+.input {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+.clearButton {
+  color: var(--color-text-secondary);
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-2);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.clearAll {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-sm);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.row:hover {
+  background: var(--color-bg);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.username {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.fullName {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.postRow {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+.postCaption {
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+}

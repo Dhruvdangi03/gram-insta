@@ -1,0 +1,107 @@
+.page {
+  display: flex;
+  height: calc(100vh - 0px);
+}
+
+@media (max-width: 734px) {
+  .page {
+    height: calc(100vh - var(--topbar-height) - var(--bottom-tabbar-height));
+  }
+}
+
+.list {
+  width: 350px;
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 734px) {
+  .list {
+    width: 100%;
+  }
+
+  /* On mobile the list and an open thread can't sit side by side (the thread needs its own full
+     width to read at all — caught live: without this, an open thread squeezed into a sliver a few
+     px wide with each message character wrapping onto its own line). Instagram's own mobile web
+     treats these as two separate full-screen views instead of a fixed split, so hide the list
+     entirely once a conversation is open; ConversationThread's back arrow returns to it. */
+  .listHiddenOnMobile {
+    display: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+}
+
+.newMessageButton {
+  color: var(--color-text-primary);
+}
+
+.items {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.row:hover {
+  background: var(--color-bg);
+}
+
+.rowActive {
+  background: var(--color-bg);
+}
+
+.rowText {
+  min-width: 0;
+  flex: 1;
+}
+
+.participants {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--space-8);
+}
+
+.detail {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 734px) {
+  .detail {
+    display: none;
+  }
+}

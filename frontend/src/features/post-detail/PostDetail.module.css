@@ -1,0 +1,152 @@
+.layout {
+  display: flex;
+  height: 80vh;
+  max-height: 800px;
+}
+
+.notFound {
+  margin: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.media {
+  position: relative;
+  flex: 1.3;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.media img,
+.media video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.side {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--color-border);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.username {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  flex: 1;
+}
+
+.captionRow {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.captionText {
+  font-size: var(--font-size-sm);
+  word-wrap: break-word;
+}
+
+.captionUsername {
+  font-weight: var(--font-weight-semibold);
+  margin-right: var(--space-1);
+}
+
+.hashtag {
+  color: var(--color-accent);
+}
+
+.footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.actionButton {
+  color: var(--color-text-primary);
+}
+
+.liked {
+  color: var(--color-danger);
+}
+
+.bookmark {
+  margin-left: auto;
+}
+
+.likeCount {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-1);
+}
+
+.timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: var(--space-3);
+}
+
+.replyingToChip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding-bottom: var(--space-2);
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.composerInput {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: var(--font-size-sm);
+}
+
+.postButton {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.postButton:disabled {
+  opacity: 0.3;
+}
+
+@media (max-width: 734px) {
+  .layout {
+    flex-direction: column;
+    height: 100%;
+    max-height: none;
+  }
+
+  .side {
+    width: 100%;
+    border-left: none;
+  }
+}

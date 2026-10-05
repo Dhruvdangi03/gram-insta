@@ -1,0 +1,58 @@
+.tray {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  max-width: var(--content-max-width);
+  scrollbar-width: none;
+}
+
+.tray::-webkit-scrollbar {
+  display: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  width: 74px;
+}
+
+.username {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  max-width: 74px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownButton {
+  position: relative;
+}
+
+.sentinel {
+  flex-shrink: 0;
+  width: 1px;
+}
+
+.addBadge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: #fff;
+  border: 2px solid var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,30 @@
+.content {
+  width: min(400px, 90vw);
+  display: flex;
+  flex-direction: column;
+}
+
+.action {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.action:last-of-type {
+  border-bottom: none;
+}
+
+.destructive {
+  color: var(--color-danger);
+}
+
+.cancel {
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
