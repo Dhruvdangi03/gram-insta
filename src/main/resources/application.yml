@@ -1,4 +1,5 @@
 server:
+  # Render injects PORT at runtime for web services; 8080 is just the local-dev default.
   port: ${PORT:8080}
   servlet:
     context-path: /api/v1
@@ -29,7 +30,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
@@ -98,17 +99,19 @@ springdoc:
   api-docs:
     enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
 
-# Verbose on purpose for local testing: SQL + bound parameters, and Spring Security's own
-# authorization decisions, on top of the request-in/request-out lines from RequestLoggingFilter.
-# Dial these down (see application-render.yml, applied via SPRING_PROFILES_ACTIVE=render on the
-# deployed service) rather than here — passwords never get logged either way (RequestLoggingFilter
-# and the auth endpoints deliberately never log bodies), but this much detail isn't something you
-# want in a shared/deployed environment's logs.
+# Quiet by default (safe for the deployed service — passwords never get logged either way,
+# RequestLoggingFilter and the auth endpoints deliberately never log bodies, but per-parameter SQL
+# bind tracing is enough log volume on its own to matter on a CPU-constrained instance). Override
+# any of these per-environment via env vars rather than editing this file — e.g. in a local .env:
+#   LOG_LEVEL_APP=DEBUG
+#   LOG_LEVEL_SQL=DEBUG
+#   LOG_LEVEL_SQL_BIND=TRACE
+#   LOG_LEVEL_SECURITY=DEBUG
 logging:
   pattern:
     console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%X{requestId:-        }]){yellow} %clr(---){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
   level:
-    com.instaclone: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
-    org.springframework.security: DEBUG
+    com.instaclone: ${LOG_LEVEL_APP:INFO}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
+    org.hibernate.orm.jdbc.bind: ${LOG_LEVEL_SQL_BIND:WARN}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
