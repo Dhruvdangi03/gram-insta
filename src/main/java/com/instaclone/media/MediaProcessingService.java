@@ -49,10 +49,14 @@ public class MediaProcessingService {
         Path outputFile = null;
         Path thumbnailFile = null;
         try {
+            log.info("Starting transcode for object key {} from R2", sourceObjectKey);
             sourceFile = Files.createTempFile("reel-source-", ".src");
+            log.info("Created temp source file: {}", sourceFile);
             download(sourceObjectKey, sourceFile);
+            log.info("Downloaded source video from R2, size: {} bytes", Files.size(sourceFile));
 
             outputFile = Files.createTempFile("reel-720p-", ".mp4");
+            log.info("Starting FFmpeg transcode to 720p...");
             runProcess(List.of(
                     "ffmpeg",
                     "-y",
@@ -69,9 +73,11 @@ public class MediaProcessingService {
                     "-c:a",
                     "aac",
                     outputFile.toString()));
+            log.info("FFmpeg transcode complete, output file size: {} bytes", Files.size(outputFile));
 
             // Probe the transcoded output, not the source — that's the file actually being served,
             // and its exact scaled width (from "-2") isn't something we should re-derive by hand.
+            log.info("Probing transcoded video for metadata...");
             VideoProbe probe = parseProbe(runProcess(List.of(
                     "ffprobe",
                     "-v",
@@ -83,6 +89,7 @@ public class MediaProcessingService {
                     "-of",
                     "json",
                     outputFile.toString())));
+            log.info("Video probe complete: {}x{} {} seconds", probe.width(), probe.height(), probe.durationSec());
 
             thumbnailFile = Files.createTempFile("reel-thumb-", ".jpg");
             double seekSeconds = Math.min(1.0, probe.durationSec() / 2.0);
@@ -99,15 +106,15 @@ public class MediaProcessingService {
 
             String videoKey = "posts/%d/%s_720p.mp4".formatted(userId, UUID.randomUUID());
             String thumbnailKey = "posts/%d/%s_thumb.jpg".formatted(userId, UUID.randomUUID());
+            log.info("Uploading transcode results to R2: video key={}, thumbnail key={}", videoKey, thumbnailKey);
             upload(outputFile, videoKey, "video/mp4");
             upload(thumbnailFile, thumbnailKey, "image/jpeg");
+            log.info("Upload complete, transcode pipeline finished");
 
-            return new TranscodeResult(
-                    storageProperties.publicUrlFor(videoKey),
-                    storageProperties.publicUrlFor(thumbnailKey),
-                    probe.width(),
-                    probe.height(),
-                    probe.durationSec());
+            String videoUrl = storageProperties.publicUrlFor(videoKey);
+            String thumbnailUrl = storageProperties.publicUrlFor(thumbnailKey);
+            log.info("Public URLs: video={}, thumbnail={}", videoUrl, thumbnailUrl);
+            return new TranscodeResult(videoUrl, thumbnailUrl, probe.width(), probe.height(), probe.durationSec());
         } catch (IOException e) {
             throw new TranscodeException("Failed to transcode " + sourceObjectKey, e);
         } finally {

@@ -54,7 +54,7 @@ services:
       - key: SPRINGDOC_API_DOCS_ENABLED
         value: "false"
       - key: LOGGING_LEVEL_COM_INSTACLONE
-        value: INFO
+        value: DEBUG
       - key: LOGGING_LEVEL_ORG_HIBERNATE_SQL
         value: WARN
       - key: LOGGING_LEVEL_ORG_HIBERNATE_ORM_JDBC_BIND

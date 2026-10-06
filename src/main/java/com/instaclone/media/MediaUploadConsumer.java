@@ -41,13 +41,16 @@ public class MediaUploadConsumer implements StreamListener<String, MapRecord<Str
         Long mediaId = Long.valueOf(body.get("mediaId"));
         String sourceObjectKey = body.get("sourceObjectKey");
         Long userId = Long.valueOf(body.get("userId"));
+        log.info("Processing transcode job for media {} from object key {}", mediaId, sourceObjectKey);
         try {
             updateStatus(mediaId, MediaStatus.PROCESSING);
+            log.info("Updated media {} status to PROCESSING, starting transcode", mediaId);
             TranscodeResult result = mediaProcessingService.transcodeAndThumbnail(sourceObjectKey, userId);
+            log.info("Transcode succeeded for media {}, applying result", mediaId);
             applyResult(mediaId, result);
-            log.info("Reel transcode complete for media {}", mediaId);
+            log.info("Reel transcode complete for media {}: {}x{} {}s", mediaId, result.width(), result.height(), result.durationSec());
         } catch (Exception e) {
-            log.error("Reel transcode failed for media {}", mediaId, e);
+            log.error("Reel transcode failed for media {} from object key {}", mediaId, sourceObjectKey, e);
             updateStatus(mediaId, MediaStatus.FAILED);
         } finally {
             redisTemplate.opsForStream().acknowledge(MediaStreamConfig.STREAM_KEY, MediaStreamConfig.CONSUMER_GROUP, message.getId());
