@@ -1,8 +1,9 @@
 package com.instaclone.config;
 
-import com.instaclone.email.EmailService;
-import com.instaclone.email.LoggingEmailService;
-import com.instaclone.email.ResendEmailService;
+import com.instaclone.config.properties.EmailProperties;
+import com.instaclone.email.service.EmailService;
+import com.instaclone.email.service.LoggingEmailService;
+import com.instaclone.email.service.ResendEmailService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

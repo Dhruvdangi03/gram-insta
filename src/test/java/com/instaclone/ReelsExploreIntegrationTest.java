@@ -2,7 +2,7 @@ package com.instaclone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.instaclone.auth.AuthRateLimitFilter;
+import com.instaclone.auth.filter.AuthRateLimitFilter;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,10 +27,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.utility.DockerImageName;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
 
 /**
  * Phase 2's own "you'll know it works when" bar: upload a short video, watch it transcode

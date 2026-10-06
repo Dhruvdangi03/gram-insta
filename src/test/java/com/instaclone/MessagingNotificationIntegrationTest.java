@@ -2,13 +2,13 @@ package com.instaclone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.instaclone.auth.AuthRateLimitFilter;
-import com.instaclone.notification.Notification;
-import com.instaclone.notification.NotificationConsumer;
-import com.instaclone.notification.NotificationRepository;
-import com.instaclone.notification.NotificationType;
-import com.instaclone.user.User;
-import com.instaclone.user.UserRepository;
+import com.instaclone.auth.filter.AuthRateLimitFilter;
+import com.instaclone.notification.entity.Notification;
+import com.instaclone.notification.enums.NotificationType;
+import com.instaclone.notification.event.NotificationConsumer;
+import com.instaclone.notification.repository.NotificationRepository;
+import com.instaclone.user.entity.User;
+import com.instaclone.user.repository.UserRepository;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.List;

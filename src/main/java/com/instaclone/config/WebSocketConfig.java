@@ -1,5 +1,7 @@
 package com.instaclone.config;
 
+import com.instaclone.config.interceptor.StompAuthChannelInterceptor;
+import com.instaclone.config.properties.CorsProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

@@ -1,5 +1,6 @@
 package com.instaclone.config;
 
+import com.instaclone.config.properties.StorageProperties;
 import java.net.URI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
