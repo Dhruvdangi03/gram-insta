@@ -91,7 +91,7 @@ public class AuthController {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE_NAME, rawRefreshToken)
                 .httpOnly(true)
                 .secure(jwtProperties.cookieSecure())
-                .sameSite("Lax")
+                .sameSite(refreshCookieSameSite())
                 .path(REFRESH_COOKIE_PATH)
                 .maxAge(jwtProperties.refreshTokenTtl())
                 .build();
@@ -102,10 +102,21 @@ public class AuthController {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(jwtProperties.cookieSecure())
-                .sameSite("Lax")
+                .sameSite(refreshCookieSameSite())
                 .path(REFRESH_COOKIE_PATH)
                 .maxAge(0)
                 .build();
         response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    // Frontend (gram-insta-1.onrender.com) and backend (gram-insta.onrender.com) are different
+    // hosts, so every call between them is cross-site: browsers never attach a SameSite=Lax
+    // cookie to a cross-site fetch/XHR (only to a top-level navigation), so the refresh-token
+    // cookie must be SameSite=None in that case. None is only honored by browsers when the
+    // cookie is also Secure, so it's gated on the same flag that turns Secure on in production;
+    // locally (http://localhost, cookieSecure=false) SameSite=None without Secure would just be
+    // dropped, so Lax is correct there since frontend and backend share localhost.
+    private String refreshCookieSameSite() {
+        return jwtProperties.cookieSecure() ? "None" : "Lax";
     }
 }
