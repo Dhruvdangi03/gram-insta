@@ -7,7 +7,6 @@ import com.instaclone.common.NotFoundException;
 import com.instaclone.notification.FollowRequestNotificationCleaner;
 import com.instaclone.notification.NotificationEvent;
 import com.instaclone.notification.NotificationType;
-import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.user.User;
 import com.instaclone.user.UserRepository;
 import java.time.Instant;
@@ -20,19 +19,16 @@ public class FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
-    private final ModerationService moderationService;
     private final ApplicationEventPublisher eventPublisher;
     private final FollowRequestNotificationCleaner followRequestNotifications;
 
     public FollowService(
             FollowRepository followRepository,
             UserRepository userRepository,
-            ModerationService moderationService,
             ApplicationEventPublisher eventPublisher,
             FollowRequestNotificationCleaner followRequestNotifications) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
-        this.moderationService = moderationService;
         this.eventPublisher = eventPublisher;
         this.followRequestNotifications = followRequestNotifications;
     }
@@ -43,9 +39,9 @@ public class FollowService {
         if (followee.getId().equals(followerId)) {
             throw new BadRequestException("You cannot follow yourself");
         }
-        if (moderationService.isBlockedEitherDirection(followerId, followee.getId())) {
-            throw new ForbiddenException("You cannot follow this account");
-        }
+        // if (moderationService.isBlockedEitherDirection(followerId, followee.getId())) {
+        //     throw new ForbiddenException("You cannot follow this account");
+        // }
         if (followRepository.findByFollowerIdAndFolloweeId(followerId, followee.getId()).isPresent()) {
             throw new ConflictException("Already following, or a follow request is already pending");
         }

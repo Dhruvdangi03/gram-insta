@@ -8,7 +8,6 @@ import com.instaclone.post.Post;
 import com.instaclone.post.PostRepository;
 import com.instaclone.social.comment.Comment;
 import com.instaclone.social.comment.CommentRepository;
-import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.user.ProfileVisibilityService;
 import com.instaclone.user.User;
 import com.instaclone.user.UserRepository;
@@ -25,7 +24,6 @@ public class LikeService {
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final ProfileVisibilityService profileVisibilityService;
-    private final ModerationService moderationService;
     private final ApplicationEventPublisher eventPublisher;
 
     public LikeService(
@@ -34,14 +32,12 @@ public class LikeService {
             CommentRepository commentRepository,
             UserRepository userRepository,
             ProfileVisibilityService profileVisibilityService,
-            ModerationService moderationService,
             ApplicationEventPublisher eventPublisher) {
         this.likeRepository = likeRepository;
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.profileVisibilityService = profileVisibilityService;
-        this.moderationService = moderationService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -102,7 +98,7 @@ public class LikeService {
         assertVisible(comment.getPost(), viewer);
         // Liking is a direct interaction with the comment's author, who may not be the post
         // owner — check the blocker relationship against both to be safe.
-        assertCanInteractWith(userId, comment.getUser().getId());
+        // assertCanInteractWith(userId, comment.getUser().getId());
 
         boolean alreadyLiked =
                 likeRepository.existsByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId);
@@ -153,11 +149,11 @@ public class LikeService {
         return new LikeCountResponse(likeCount, false);
     }
 
-    private void assertCanInteractWith(Long viewerId, Long otherUserId) {
-        if (moderationService.isBlockedEitherDirection(viewerId, otherUserId)) {
-            throw new ForbiddenException("You can't interact with this account");
-        }
-    }
+    // private void assertCanInteractWith(Long viewerId, Long otherUserId) {
+    //     if (moderationService.isBlockedEitherDirection(viewerId, otherUserId)) {
+    //         throw new ForbiddenException("You can't interact with this account");
+    //     }
+    // }
 
     private void assertVisible(Post post, User viewer) {
         if (!profileVisibilityService.isVisible(post.getUser(), viewer)) {
@@ -166,8 +162,8 @@ public class LikeService {
         // isVisible is deliberately directional (lets a blocker still view the blocked account's
         // profile to reach Unblock) — but liking/commenting is a write, so it must also check the
         // blocker's own side, which isVisible alone doesn't cover.
-        if (moderationService.isBlockedEitherDirection(viewer.getId(), post.getUser().getId())) {
-            throw new ForbiddenException("You can't interact with this account");
-        }
+        // if (moderationService.isBlockedEitherDirection(viewer.getId(), post.getUser().getId())) {
+        //     throw new ForbiddenException("You can't interact with this account");
+        // }
     }
 }

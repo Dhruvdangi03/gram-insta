@@ -2,7 +2,6 @@ package com.instaclone.user;
 
 import com.instaclone.social.follow.FollowRepository;
 import com.instaclone.social.follow.FollowStatus;
-import com.instaclone.social.moderation.ModerationService;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,19 +13,17 @@ import org.springframework.stereotype.Service;
 public class ProfileVisibilityService {
 
     private final FollowRepository followRepository;
-    private final ModerationService moderationService;
 
-    public ProfileVisibilityService(FollowRepository followRepository, ModerationService moderationService) {
+    public ProfileVisibilityService(FollowRepository followRepository) {
         this.followRepository = followRepository;
-        this.moderationService = moderationService;
     }
 
     public boolean isVisible(User author, User viewer) {
         // Directional: a user who blocks someone keeps full read access to that person's content
         // (so they can still find the Unblock action) — only the blocked party loses access.
-        if (viewer != null && moderationService.isBlockedBy(author.getId(), viewer.getId())) {
-            return false;
-        }
+        // if (viewer != null && moderationService.isBlockedBy(author.getId(), viewer.getId())) {
+        //     return false;
+        // }
         boolean viewerFollowsAuthor = viewer != null
                 && followRepository.existsByFollowerIdAndFolloweeIdAndStatus(
                         viewer.getId(), author.getId(), FollowStatus.ACCEPTED);

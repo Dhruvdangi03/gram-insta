@@ -7,9 +7,7 @@ import com.instaclone.post.Post;
 import com.instaclone.post.PostRepository;
 import com.instaclone.post.PostResponse;
 import com.instaclone.post.PostService;
-import com.instaclone.report.ReportRepository;
 import com.instaclone.social.follow.FollowRepository;
-import com.instaclone.social.moderation.ModerationService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -30,20 +28,14 @@ public class FeedService {
     private final FollowRepository followRepository;
     private final PostRepository postRepository;
     private final PostService postService;
-    private final ModerationService moderationService;
-    private final ReportRepository reportRepository;
 
     public FeedService(
             FollowRepository followRepository,
             PostRepository postRepository,
-            PostService postService,
-            ModerationService moderationService,
-            ReportRepository reportRepository) {
+            PostService postService) {
         this.followRepository = followRepository;
         this.postRepository = postRepository;
         this.postService = postService;
-        this.moderationService = moderationService;
-        this.reportRepository = reportRepository;
     }
 
     @Transactional(readOnly = true)
@@ -71,8 +63,6 @@ public class FeedService {
     private List<Long> excludedPostIds(Long viewerId) {
         List<Long> ids = new ArrayList<>();
         ids.add(-1L); // sentinel: a native "NOT IN ()" with an empty list is invalid SQL
-        ids.addAll(reportRepository.findReportedPostIds(viewerId));
-        ids.addAll(reportRepository.findPostIdsByReportedAuthors(viewerId));
         return ids;
     }
 
@@ -86,7 +76,6 @@ public class FeedService {
     public CursorPage<PostResponse> getExploreFeed(Long viewerId, String cursor, int limit) {
         List<Long> excludedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));
         excludedIds.add(viewerId);
-        excludedIds.addAll(moderationService.getBlockedEitherDirectionIds(viewerId));
         List<Long> excludedPostIds = excludedPostIds(viewerId);
         Instant since = Instant.now().minus(EXPLORE_WINDOW_DAYS, ChronoUnit.DAYS);
 

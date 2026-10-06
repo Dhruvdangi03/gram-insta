@@ -9,7 +9,6 @@ import com.instaclone.post.PostRepository;
 import com.instaclone.social.follow.FollowRepository;
 import com.instaclone.social.follow.FollowStatus;
 import com.instaclone.social.follow.FollowUserRow;
-import com.instaclone.social.moderation.ModerationService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +22,6 @@ public class UserService {
     private final FollowRepository followRepository;
     private final PostRepository postRepository;
     private final ProfileVisibilityService profileVisibilityService;
-    private final ModerationService moderationService;
     private final FollowRequestNotificationCleaner followRequestNotifications;
 
     public UserService(
@@ -31,13 +29,11 @@ public class UserService {
             FollowRepository followRepository,
             PostRepository postRepository,
             ProfileVisibilityService profileVisibilityService,
-            ModerationService moderationService,
             FollowRequestNotificationCleaner followRequestNotifications) {
         this.userRepository = userRepository;
         this.followRepository = followRepository;
         this.postRepository = postRepository;
         this.profileVisibilityService = profileVisibilityService;
-        this.moderationService = moderationService;
         this.followRequestNotifications = followRequestNotifications;
     }
 
@@ -55,9 +51,9 @@ public class UserService {
         // unlike a private account (which still shows its header + a gate) — but directional, not
         // mutual: the person who did the blocking keeps full profile access so they can still
         // reach the Unblock action.
-        if (viewerId != null && moderationService.isBlockedBy(target.getId(), viewerId)) {
-            throw new NotFoundException("User not found");
-        }
+        // if (viewerId != null && moderationService.isBlockedBy(target.getId(), viewerId)) {
+        //     throw new NotFoundException("User not found");
+        // }
         return toProfileResponse(target, viewerId);
     }
 
@@ -136,7 +132,7 @@ public class UserService {
     public List<UserSummary> getSuggestions(Long viewerId, int limit) {
         List<Long> excludedIds = new ArrayList<>(followRepository.findAllFolloweeIds(viewerId));
         excludedIds.add(viewerId);
-        excludedIds.addAll(moderationService.getBlockedEitherDirectionIds(viewerId));
+        // excludedIds.addAll(moderationService.getBlockedEitherDirectionIds(viewerId));
         return userRepository.findSuggestions(excludedIds, limit).stream()
                 .map(UserSummary::from)
                 .toList();
@@ -188,8 +184,8 @@ public class UserService {
                                 ? ViewerRelationship.FOLLOWING
                                 : ViewerRelationship.REQUESTED)
                         .orElse(ViewerRelationship.NOT_FOLLOWING);
-                viewerHasBlocked = moderationService.isBlockedEitherDirection(viewerId, target.getId());
-                viewerHasRestricted = moderationService.isRestrictedBy(viewerId, target.getId());
+                // viewerHasBlocked = moderationService.isBlockedEitherDirection(viewerId, target.getId());
+                // viewerHasRestricted = moderationService.isRestrictedBy(viewerId, target.getId());
             }
         }
 

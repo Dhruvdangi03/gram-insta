@@ -11,7 +11,6 @@ import com.instaclone.post.Post;
 import com.instaclone.post.PostRepository;
 import com.instaclone.social.like.LikeRepository;
 import com.instaclone.social.like.LikeableType;
-import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.user.ProfileVisibilityService;
 import com.instaclone.user.User;
 import com.instaclone.user.UserRepository;
@@ -35,7 +34,6 @@ public class CommentService {
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
     private final ProfileVisibilityService profileVisibilityService;
-    private final ModerationService moderationService;
     private final ApplicationEventPublisher eventPublisher;
 
     public CommentService(
@@ -44,14 +42,12 @@ public class CommentService {
             UserRepository userRepository,
             LikeRepository likeRepository,
             ProfileVisibilityService profileVisibilityService,
-            ModerationService moderationService,
             ApplicationEventPublisher eventPublisher) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
         this.profileVisibilityService = profileVisibilityService;
-        this.moderationService = moderationService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -63,9 +59,9 @@ public class CommentService {
         // assertVisible is deliberately directional (lets a blocker still view a blocked account's
         // posts to reach Unblock) — but commenting is a write, so it must also check the
         // commenter's own side of the block, which assertVisible alone doesn't cover.
-        if (moderationService.isBlockedEitherDirection(userId, post.getUser().getId())) {
-            throw new ForbiddenException("You can't interact with this account");
-        }
+        // if (moderationService.isBlockedEitherDirection(userId, post.getUser().getId())) {
+        //     throw new ForbiddenException("You can't interact with this account");
+        // }
 
         Comment parent = null;
         if (request.parentCommentId() != null) {
@@ -142,8 +138,8 @@ public class CommentService {
                     Long authorId = c.getUser().getId();
                     if (viewerId.equals(authorId) || viewerId.equals(postOwnerId)) {
                         return true;
-                    }
-                    return !moderationService.isRestrictedBy(postOwnerId, authorId);
+                    }return false;
+                    // return !moderationService.isRestrictedBy(postOwnerId, authorId);
                 })
                 .map(c -> toResponse(c, authorsById.get(c.getUser().getId()), likedCommentIds.contains(c.getId())))
                 .toList();

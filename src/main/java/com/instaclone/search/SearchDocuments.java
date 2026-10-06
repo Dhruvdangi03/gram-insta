@@ -1,6 +1,5 @@
 package com.instaclone.search;
 
-import com.instaclone.hashtag.Hashtag;
 import com.instaclone.post.Post;
 import com.instaclone.user.User;
 import java.util.HashMap;
@@ -27,7 +26,7 @@ public final class SearchDocuments {
         fields.put("caption", post.getCaption());
         fields.put("authorId", String.valueOf(post.getUser().getId()));
         fields.put("authorUsername", post.getUser().getUsername());
-        fields.put("hashtags", post.getHashtags().stream().map(Hashtag::getTag).toList());
+        // fields.put("hashtags", post.getHashtags().stream().map(Hashtag::getTag).toList());
         fields.put("createdAt", post.getCreatedAt().toString());
         return fields;
     }
