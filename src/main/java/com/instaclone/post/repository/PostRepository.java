@@ -19,6 +19,30 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("select coalesce(sum(p.commentCount), 0) from Post p where p.user.id = :userId")
     long sumCommentCountByUserId(@Param("userId") Long userId);
 
+    // Post deletion, done as direct SQL so it never depends on loading entities. likes and
+    // notifications reference their target by (type, id) with no foreign key, so they are not
+    // cascaded by the database and must be removed explicitly — including those pointing at the
+    // post's comments, which are about to be cascade-deleted. Call these in this order inside one
+    // transaction, before deletePostById (the comment sub-selects need the comments to still exist).
+    @Modifying
+    @Query(
+            value = "DELETE FROM likes WHERE (likeable_type = 'POST' AND likeable_id = :postId) "
+                    + "OR (likeable_type = 'COMMENT' AND likeable_id IN (SELECT id FROM comments WHERE post_id = :postId))",
+            nativeQuery = true)
+    void deleteLikesForPost(@Param("postId") Long postId);
+
+    @Modifying
+    @Query(
+            value = "DELETE FROM notifications WHERE (target_type = 'POST' AND target_id = :postId) "
+                    + "OR (target_type = 'COMMENT' AND target_id IN (SELECT id FROM comments WHERE post_id = :postId))",
+            nativeQuery = true)
+    void deleteNotificationsForPost(@Param("postId") Long postId);
+
+    // media, comments and saved_posts rows go with it via ON DELETE CASCADE.
+    @Modifying
+    @Query(value = "DELETE FROM posts WHERE id = :postId", nativeQuery = true)
+    void deletePostById(@Param("postId") Long postId);
+
     // Atomic SQL increments/decrements, not read-modify-write on the entity — two concurrent
     // likes/comments both reading like_count=5 and writing 6 would otherwise lose one update.
     @Modifying
