@@ -145,13 +145,11 @@ public class PostService {
             throw new ForbiddenException("You can only delete your own posts");
         }
 
-        List<Long> commentIds = commentRepository.findIdsByPostId(postId);
-        if (!commentIds.isEmpty()) {
-            likeRepository.deleteByLikeableTypeAndLikeableIdIn(LikeableType.COMMENT, commentIds);
-        }
-        likeRepository.deleteByLikeableTypeAndLikeableId(LikeableType.POST, postId);
-        notificationRepository.deleteByTarget("POST", postId);
-        postRepository.delete(post);
+        // Direct SQL (see PostRepository): removes likes/notifications for the post and its
+        // comments, then the post itself; comments/media/saved_posts cascade in the database.
+        postRepository.deleteLikesForPost(postId);
+        postRepository.deleteNotificationsForPost(postId);
+        postRepository.deletePostById(postId);
     }
 
     @Transactional(readOnly = true)
