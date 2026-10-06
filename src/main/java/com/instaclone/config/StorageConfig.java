@@ -45,12 +45,16 @@ public class StorageConfig {
 
     @Bean
     public S3Presigner s3Presigner(StorageProperties props) {
-        // publicBaseUrl, not endpoint: a presigned URL's host is part of what's signed, and it's
-        // handed to an external client (curl, a browser) to PUT/GET directly — it must be R2's
-        // public bucket URL (or a custom domain), not the account-scoped S3 API endpoint, which
-        // isn't itself publicly browsable.
+        // endpoint, not publicBaseUrl: unlike a generic CDN-fronted S3 bucket, R2's S3 API endpoint
+        // (*.r2.cloudflarestorage.com) is itself directly reachable by any client, browsers
+        // included — that's the whole point of it being S3-compatible, and it's the only host that
+        // actually verifies a SigV4-signed request. R2's public r2.dev domain only serves anonymous
+        // GETs for already-uploaded objects and has no signature verification at all, so a
+        // presigned PUT/GET signed against it 401s. publicBaseUrl is used elsewhere purely to build
+        // the plain (unsigned) URL stored/returned for later *viewing* the object once uploaded
+        // (see StorageProperties.publicUrlFor) — it was never meant to be the signing host.
         return S3Presigner.builder()
-                .endpointOverride(URI.create(props.publicBaseUrl()))
+                .endpointOverride(URI.create(props.endpoint()))
                 .region(Region.of(props.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(props.accessKey(), props.secretKey())))
