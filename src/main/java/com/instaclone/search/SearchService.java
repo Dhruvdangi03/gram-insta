@@ -1,12 +1,9 @@
 package com.instaclone.search;
 
-import com.instaclone.hashtag.Hashtag;
 import com.instaclone.post.Post;
 import com.instaclone.post.PostRepository;
-import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.user.User;
 import com.instaclone.user.UserRepository;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +23,10 @@ public class SearchService {
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
-    private final ModerationService moderationService;
 
-    public SearchService(UserRepository userRepository, PostRepository postRepository, ModerationService moderationService) {
+    public SearchService(UserRepository userRepository, PostRepository postRepository) {
         this.userRepository = userRepository;
         this.postRepository = postRepository;
-        this.moderationService = moderationService;
     }
 
     @Transactional(readOnly = true)
@@ -51,9 +46,7 @@ public class SearchService {
     }
 
     private List<Long> excludedIds(Long viewerId) {
-        List<Long> excludedIds = new ArrayList<>(moderationService.getBlockedEitherDirectionIds(viewerId));
-        excludedIds.add(viewerId);
-        return excludedIds;
+        return List.of(viewerId);
     }
 
     private static UserSearchResult toUserResult(User user) {
@@ -67,7 +60,7 @@ public class SearchService {
                 post.getCaption(),
                 post.getUser().getId(),
                 post.getUser().getUsername(),
-                post.getHashtags().stream().map(Hashtag::getTag).sorted().toList(),
+                List.of(),
                 post.getCreatedAt().toString());
     }
 }

@@ -5,7 +5,6 @@ import com.instaclone.common.Cursor;
 import com.instaclone.common.CursorPage;
 import com.instaclone.common.NotFoundException;
 import com.instaclone.config.StorageProperties;
-import com.instaclone.hashtag.HashtagService;
 import com.instaclone.media.MediaUploadedEvent;
 import com.instaclone.post.Media;
 import com.instaclone.post.MediaRepository;
@@ -43,7 +42,6 @@ public class ReelService {
     private final PostService postService;
     private final StorageProperties storageProperties;
     private final ApplicationEventPublisher eventPublisher;
-    private final HashtagService hashtagService;
 
     public ReelService(
             PostRepository postRepository,
@@ -52,8 +50,7 @@ public class ReelService {
             FollowRepository followRepository,
             PostService postService,
             StorageProperties storageProperties,
-            ApplicationEventPublisher eventPublisher,
-            HashtagService hashtagService) {
+            ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.mediaRepository = mediaRepository;
         this.userRepository = userRepository;
@@ -61,7 +58,6 @@ public class ReelService {
         this.postService = postService;
         this.storageProperties = storageProperties;
         this.eventPublisher = eventPublisher;
-        this.hashtagService = hashtagService;
     }
 
     @Transactional
@@ -81,7 +77,6 @@ public class ReelService {
         post.setType(PostType.REEL);
         post.setMediaCount(1);
         post.setCreatedAt(Instant.now());
-        hashtagService.parseAndAttach(post, request.caption());
         post = postRepository.save(post);
 
         Media media = new Media();

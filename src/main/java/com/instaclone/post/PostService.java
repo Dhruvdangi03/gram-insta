@@ -6,13 +6,10 @@ import com.instaclone.common.CursorPage;
 import com.instaclone.common.ForbiddenException;
 import com.instaclone.common.NotFoundException;
 import com.instaclone.config.StorageProperties;
-import com.instaclone.hashtag.Hashtag;
-import com.instaclone.hashtag.HashtagService;
 import com.instaclone.notification.NotificationRepository;
 import com.instaclone.social.comment.CommentRepository;
 import com.instaclone.social.like.LikeRepository;
 import com.instaclone.social.like.LikeableType;
-import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.social.saved.SavedPostRepository;
 import com.instaclone.user.ProfileVisibilityService;
 import com.instaclone.user.User;
@@ -39,8 +36,6 @@ public class PostService {
     private final SavedPostRepository savedPostRepository;
     private final ProfileVisibilityService profileVisibilityService;
     private final StorageProperties storageProperties;
-    private final HashtagService hashtagService;
-    private final ModerationService moderationService;
     private final NotificationRepository notificationRepository;
 
     public PostService(
@@ -52,8 +47,6 @@ public class PostService {
             SavedPostRepository savedPostRepository,
             ProfileVisibilityService profileVisibilityService,
             StorageProperties storageProperties,
-            HashtagService hashtagService,
-            ModerationService moderationService,
             NotificationRepository notificationRepository) {
         this.postRepository = postRepository;
         this.mediaRepository = mediaRepository;
@@ -63,8 +56,6 @@ public class PostService {
         this.savedPostRepository = savedPostRepository;
         this.profileVisibilityService = profileVisibilityService;
         this.storageProperties = storageProperties;
-        this.hashtagService = hashtagService;
-        this.moderationService = moderationService;
         this.notificationRepository = notificationRepository;
     }
 
@@ -85,7 +76,6 @@ public class PostService {
         post.setType(request.media().size() > 1 ? PostType.CAROUSEL : PostType.PHOTO);
         post.setMediaCount(request.media().size());
         post.setCreatedAt(Instant.now());
-        hashtagService.parseAndAttach(post, request.caption());
         post = postRepository.save(post);
 
         List<Media> media = new ArrayList<>();
@@ -123,16 +113,9 @@ public class PostService {
             throw new ForbiddenException("You can only edit your own posts");
         }
 
-        // A null field means "not part of this patch" (omitted); an explicit "" clears it. Without
-        // this distinction, a caller that only means to update location would null out the caption
-        // (and wipe its hashtags) by simply not mentioning it.
+        // A null field means "not part of this patch" (omitted); an explicit "" clears it.
         if (request.caption() != null) {
             post.setCaption(request.caption());
-            if (request.caption().isBlank()) {
-                post.getHashtags().clear();
-            } else {
-                hashtagService.parseAndAttach(post, request.caption());
-            }
         }
         if (request.location() != null) {
             post.setLocation(request.location());
@@ -186,22 +169,7 @@ public class PostService {
         return toPage(rows, limit, viewerId);
     }
 
-    @Transactional(readOnly = true)
-    public CursorPage<PostResponse> getPostsByHashtag(String tag, Long viewerId, String cursor, int limit) {
-        // A discovery surface like Explore — blocked-either-direction users must be excluded here
-        // too, not just the viewer themselves.
-        List<Long> excludedIds = new ArrayList<>(moderationService.getBlockedEitherDirectionIds(viewerId));
-        excludedIds.add(viewerId);
-
-        Cursor decoded = cursor == null ? null : Cursor.decode(cursor);
-        List<Post> rows = decoded == null
-                ? postRepository.findFirstPageByHashtag(tag, excludedIds, limit + 1)
-                : postRepository.findPageByHashtagAfterCursor(tag, excludedIds, decoded.createdAt(), decoded.id(), limit + 1);
-
-        return toPage(rows, limit, viewerId);
-    }
-
-    /** Used by FeedService, which already knows the raw (limit+1)-sized, keyset-ordered post rows. */
+/** Used by FeedService, which already knows the raw (limit+1)-sized, keyset-ordered post rows. */
     @Transactional(readOnly = true)
     public CursorPage<PostResponse> toPage(List<Post> rowsWithLookahead, int limit, Long viewerId) {
         CursorPage<Post> page =
@@ -257,7 +225,6 @@ public class PostService {
                 likedByViewer,
                 savedByViewer,
                 post.getCreatedAt(),
-                media.stream().map(MediaResponse::from).toList(),
-                post.getHashtags().stream().map(Hashtag::getTag).sorted().toList());
+                media.stream().map(MediaResponse::from).toList());
     }
 }

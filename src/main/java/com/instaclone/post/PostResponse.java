@@ -16,5 +16,4 @@ public record PostResponse(
         boolean likedByViewer,
         boolean savedByViewer,
         Instant createdAt,
-        List<MediaResponse> media,
-        List<String> hashtags) {}
+        List<MediaResponse> media) {}
