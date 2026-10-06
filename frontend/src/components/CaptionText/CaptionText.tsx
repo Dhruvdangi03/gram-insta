@@ -11,7 +11,7 @@ export interface CaptionTextProps {
   showUsername?: boolean
 }
 
-/** Renders "username caption text" with the username linked to the profile and #hashtags linked to their browse page — shared by PostCard, PostDetail, and ReelItem so caption parsing lives in one place. */
+/** Renders "username caption text" with the username linked to the profile and #tags highlighted (plain text, not links) — shared by PostCard, PostDetail, and ReelItem so caption parsing lives in one place. */
 export function CaptionText({
   username,
   caption,
@@ -30,9 +30,9 @@ export function CaptionText({
       ) : null}
       {parts.map((part, i) =>
         part.startsWith('#') ? (
-          <Link key={i} to={`/explore/tags/${part.slice(1).toLowerCase()}`} className={hashtagClassName}>
+          <span key={i} className={hashtagClassName}>
             {part}
-          </Link>
+          </span>
         ) : (
           <Fragment key={i}>{part}</Fragment>
         ),

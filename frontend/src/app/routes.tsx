@@ -6,7 +6,6 @@ import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { CreatePostModal } from '@/features/create-post/CreatePostModal'
 import { ExplorePage } from '@/features/explore/ExplorePage'
 import { HomeFeedPage } from '@/features/feed/HomeFeedPage'
-import { HashtagPage } from '@/features/hashtag/HashtagPage'
 import { ConversationThread } from '@/features/messaging/ConversationThread'
 import { DirectInboxPage } from '@/features/messaging/DirectInboxPage'
 import { EditProfilePage } from '@/features/profile/EditProfilePage'
@@ -49,7 +48,6 @@ export const routes: RouteObject[] = [
         element: <DirectInboxPage />,
         children: [{ path: ':conversationId', element: <ConversationThread /> }],
       },
-      { path: 'explore/tags/:tag', element: <HashtagPage /> },
       { path: 'p/:postId', element: <PostPage /> },
       { path: 'accounts/edit', element: <EditProfilePage /> },
       { path: 'accounts/insights', element: <InsightsPage /> },

@@ -7,7 +7,7 @@
 #
 # The frontend (frontend/) is a separate Render Static Site: New -> Static Site, root directory
 # "frontend", build command "npm run build", publish directory "dist". Set VITE_API_BASE_URL and
-# VITE_WS_URL there to this service's https URL (see frontend/.env.prod).
+# VITE_WS_URL there to this service's https URL (see frontend/.env.example).
 
 services:
   - type: web

@@ -56,12 +56,6 @@ public class CommentService {
         Post post = postRepository.findById(postId).orElseThrow(() -> new NotFoundException("Post not found"));
         User author = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         assertVisible(post, author);
-        // assertVisible is deliberately directional (lets a blocker still view a blocked account's
-        // posts to reach Unblock) — but commenting is a write, so it must also check the
-        // commenter's own side of the block, which assertVisible alone doesn't cover.
-        // if (moderationService.isBlockedEitherDirection(userId, post.getUser().getId())) {
-        //     throw new ForbiddenException("You can't interact with this account");
-        // }
 
         Comment parent = null;
         if (request.parentCommentId() != null) {
@@ -129,18 +123,7 @@ public class CommentService {
                 ? Set.of()
                 : new HashSet<>(likeRepository.findLikedIds(viewerId, LikeableType.COMMENT, commentIds));
 
-        Long postOwnerId = post.getUser().getId();
         List<CommentResponse> items = page.items().stream()
-                // A comment from someone the post's owner has restricted is hidden from every
-                // viewer except the restricted author themselves and the post owner reviewing it —
-                // the author never finds out, matching real Instagram's silent restrict behavior.
-                .filter(c -> {
-                    Long authorId = c.getUser().getId();
-                    if (viewerId.equals(authorId) || viewerId.equals(postOwnerId)) {
-                        return true;
-                    }return false;
-                    // return !moderationService.isRestrictedBy(postOwnerId, authorId);
-                })
                 .map(c -> toResponse(c, authorsById.get(c.getUser().getId()), likedCommentIds.contains(c.getId())))
                 .toList();
         return new CursorPage<>(items, page.nextCursor(), page.hasMore());

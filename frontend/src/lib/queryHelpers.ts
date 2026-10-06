@@ -9,13 +9,15 @@ function isInfiniteData(value: unknown): value is { pages: unknown[] } {
   return typeof value === 'object' && value !== null && Array.isArray((value as { pages?: unknown }).pages)
 }
 
+// savedByViewer only exists on Post — comments also carry likeCount, so likeCount alone isn't
+// enough to tell a cached post from a cached comment.
 function isPost(value: unknown): value is Post {
-  return typeof value === 'object' && value !== null && 'likeCount' in value && 'hashtags' in value
+  return typeof value === 'object' && value !== null && 'likeCount' in value && 'savedByViewer' in value
 }
 
 /**
  * A post's like/comment state is cached independently in N places at once (home feed, explore,
- * a profile grid, the hashtag grid, a single-post detail view) — this patches all of them via a
+ * a profile grid, a single-post detail view) — this patches all of them via a
  * predicate over every query's cached shape rather than a fixed list of query keys, so a like/
  * comment mutation is instantly reflected everywhere the post happens to be cached. Deliberately
  * does not force a refetch afterwards (that would reshuffle an in-progress scroll).

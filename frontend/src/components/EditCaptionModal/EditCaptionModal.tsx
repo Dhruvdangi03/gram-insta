@@ -20,7 +20,6 @@ export function EditCaptionModal({ post, onClose }: { post: Post; onClose: () =>
       patchPostInAllCaches(queryClient, post.id, {
         caption: updated.caption,
         location: updated.location,
-        hashtags: updated.hashtags,
       })
       onClose()
     },

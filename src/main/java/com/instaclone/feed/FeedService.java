@@ -55,11 +55,9 @@ public class FeedService {
         return postService.toPage(rows, limit, viewerId);
     }
 
-    /** A reported post (see ReportService) is filtered out of the two passive/algorithmic surfaces
-     * — direct navigation (profile grid, a shared link) still shows it, since the report is a
-     * "don't surface this to me again" signal, not a ban. Applied inside the native query itself
-     * (NOT IN), not as a post-fetch filter, so it can't shrink the limit+1 lookahead window and
-     * corrupt CursorPage.of's hasMore detection. */
+    /** Post ids to keep out of the home/explore feeds. Nothing is excluded at the moment, but the
+     * feed queries keep the NOT IN hook (applied inside the native query, so it can't shrink the
+     * limit+1 lookahead window CursorPage.of relies on). Always non-empty: see the sentinel. */
     private List<Long> excludedPostIds(Long viewerId) {
         List<Long> ids = new ArrayList<>();
         ids.add(-1L); // sentinel: a native "NOT IN ()" with an empty list is invalid SQL

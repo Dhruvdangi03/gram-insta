@@ -49,12 +49,6 @@ public class SavedPostService {
         if (!profileVisibilityService.isVisible(post.getUser(), viewer)) {
             throw new ForbiddenException("This account is private");
         }
-        // isVisible is deliberately directional (lets a blocker still view a blocked account's
-        // posts) — but saving is a write, so it must also check the saver's own side of the block,
-        // matching the same guard LikeService/CommentService/FollowService enforce on their writes.
-        // if (moderationService.isBlockedEitherDirection(userId, post.getUser().getId())) {
-        //     throw new ForbiddenException("You can't interact with this account");
-        // }
         if (savedPostRepository.existsByUserIdAndPostId(userId, postId)) {
             return;
         }

@@ -26,7 +26,6 @@ public final class SearchDocuments {
         fields.put("caption", post.getCaption());
         fields.put("authorId", String.valueOf(post.getUser().getId()));
         fields.put("authorUsername", post.getUser().getUsername());
-        // fields.put("hashtags", post.getHashtags().stream().map(Hashtag::getTag).toList());
         fields.put("createdAt", post.getCreatedAt().toString());
         return fields;
     }

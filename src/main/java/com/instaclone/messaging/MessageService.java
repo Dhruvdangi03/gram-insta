@@ -65,11 +65,6 @@ public class MessageService {
         if (others.isEmpty()) {
             throw new BadRequestException("A conversation needs at least one other participant");
         }
-        // boolean anyBlocked = others.stream()
-        //         .anyMatch(u -> moderationService.isBlockedEitherDirection(creatorId, u.getId()));
-        // if (anyBlocked) {
-        //     throw new ForbiddenException("You can't start a conversation with a blocked account");
-        // }
 
         Conversation conversation;
         if (others.size() == 1) {
@@ -113,15 +108,6 @@ public class MessageService {
         Conversation conversation =
                 conversationRepository.findById(conversationId).orElseThrow(() -> new NotFoundException("Conversation not found"));
         User sender = userRepository.findById(senderId).orElseThrow(() -> new NotFoundException("User not found"));
-
-        // getOrCreateConversation only blocks a NEW conversation from being created between blocked
-        // parties — without this check, a block already has zero effect once a conversation exists.
-        // boolean anyBlocked = conversation.getParticipants().stream()
-        //         .filter(p -> !p.getId().equals(senderId))
-        //         .anyMatch(p -> moderationService.isBlockedEitherDirection(senderId, p.getId()));
-        // if (anyBlocked) {
-        //     throw new ForbiddenException("You can't send messages in a conversation with a blocked account");
-        // }
 
         Message message = new Message();
         message.setConversation(conversation);

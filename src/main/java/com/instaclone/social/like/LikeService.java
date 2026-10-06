@@ -96,9 +96,6 @@ public class LikeService {
                 .orElseThrow(() -> new NotFoundException("Comment not found"));
         User viewer = userRepository.getReferenceById(userId);
         assertVisible(comment.getPost(), viewer);
-        // Liking is a direct interaction with the comment's author, who may not be the post
-        // owner — check the blocker relationship against both to be safe.
-        // assertCanInteractWith(userId, comment.getUser().getId());
 
         boolean alreadyLiked =
                 likeRepository.existsByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId);
@@ -149,21 +146,9 @@ public class LikeService {
         return new LikeCountResponse(likeCount, false);
     }
 
-    // private void assertCanInteractWith(Long viewerId, Long otherUserId) {
-    //     if (moderationService.isBlockedEitherDirection(viewerId, otherUserId)) {
-    //         throw new ForbiddenException("You can't interact with this account");
-    //     }
-    // }
-
     private void assertVisible(Post post, User viewer) {
         if (!profileVisibilityService.isVisible(post.getUser(), viewer)) {
             throw new ForbiddenException("This account is private");
         }
-        // isVisible is deliberately directional (lets a blocker still view the blocked account's
-        // profile to reach Unblock) — but liking/commenting is a write, so it must also check the
-        // blocker's own side, which isVisible alone doesn't cover.
-        // if (moderationService.isBlockedEitherDirection(viewer.getId(), post.getUser().getId())) {
-        //     throw new ForbiddenException("You can't interact with this account");
-        // }
     }
 }

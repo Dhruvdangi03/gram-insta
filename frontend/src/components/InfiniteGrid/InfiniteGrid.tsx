@@ -13,7 +13,7 @@ export interface InfiniteGridProps<T> {
   emptyState?: ReactNode
 }
 
-/** The 3-column square grid shared by profile posts, explore, and hashtag pages — one pagination + layout implementation for all three. */
+/** The 3-column square grid shared by profile posts and explore — one pagination + layout implementation for both. */
 export function InfiniteGrid<T>({
   items,
   isLoading,

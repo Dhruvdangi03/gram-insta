@@ -12,6 +12,4 @@ public record UserProfileResponse(
         long postCount,
         long followerCount,
         long followingCount,
-        ViewerRelationship viewerRelationship,
-        boolean viewerHasBlocked,
-        boolean viewerHasRestricted) {}
+        ViewerRelationship viewerRelationship) {}

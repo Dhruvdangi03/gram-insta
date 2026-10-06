@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Runs the view-record insert in its own transaction (REQUIRES_NEW) so a losing
  * unique(story_id, viewer_id) race only aborts this isolated transaction, not the caller's —
- * mirrors SavedPostInserter/HashtagCreator's reasoning exactly.
+ * mirrors SavedPostInserter's reasoning exactly.
  */
 @Component
 class StoryViewInserter {

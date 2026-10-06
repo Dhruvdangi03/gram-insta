@@ -3,7 +3,7 @@ import type { CursorPage } from '@/lib/api/types'
 
 /**
  * Wraps every CursorPage<T> list endpoint with the same useInfiniteQuery shape — one pagination
- * implementation shared by feed, profile grid, explore, hashtag grid, followers/following,
+ * implementation shared by feed, profile grid, explore, followers/following,
  * notifications, and the conversation list, instead of eight ad-hoc copies.
  */
 export function useCursorInfiniteQuery<T>(

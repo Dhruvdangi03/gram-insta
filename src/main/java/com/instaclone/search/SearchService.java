@@ -9,13 +9,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Plain Postgres-backed search (ILIKE over username/full name/caption/hashtag), replacing the
+ * Plain Postgres-backed search (ILIKE over username/full name/caption), replacing the
  * former Meilisearch-indexed implementation. No separate index to keep in sync: everything here
  * queries the primary tables directly, so results are always consistent with the data (unlike the
  * old async Redis-stream-fed index, which had a short propagation delay).
  *
  * <p>Both queries always append the viewer's own id to the excluded-ids list, same convention as
- * PostRepository's explore/hashtag queries — a native "NOT IN ()" with an empty list is invalid
+ * PostRepository's explore queries — a native "NOT IN ()" with an empty list is invalid
  * Postgres syntax, and excluding the viewer from their own search results is harmless.
  */
 @Service
@@ -60,7 +60,6 @@ public class SearchService {
                 post.getCaption(),
                 post.getUser().getId(),
                 post.getUser().getUsername(),
-                List.of(),
                 post.getCreatedAt().toString());
     }
 }

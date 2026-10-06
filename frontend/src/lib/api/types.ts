@@ -39,8 +39,6 @@ export interface UserProfile {
   followerCount: number
   followingCount: number
   viewerRelationship: ViewerRelationship
-  viewerHasBlocked: boolean
-  viewerHasRestricted: boolean
 }
 
 export interface AuthTokens {
@@ -79,7 +77,6 @@ export interface Post {
   savedByViewer: boolean
   createdAt: string
   media: Media[]
-  hashtags: string[]
 }
 
 export interface PresignedUpload {
@@ -184,6 +181,5 @@ export interface PostSearchResult {
   caption: string
   authorId: number
   authorUsername: string
-  hashtags: string[]
   createdAt: string
 }

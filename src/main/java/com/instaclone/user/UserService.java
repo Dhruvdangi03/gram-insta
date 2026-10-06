@@ -47,13 +47,6 @@ public class UserService {
 
     public UserProfileResponse getProfile(String username, Long viewerId) {
         User target = findByUsernameOrThrow(username);
-        // A block hides the account entirely (looks like it doesn't exist) for the blocked party,
-        // unlike a private account (which still shows its header + a gate) — but directional, not
-        // mutual: the person who did the blocking keeps full profile access so they can still
-        // reach the Unblock action.
-        // if (viewerId != null && moderationService.isBlockedBy(target.getId(), viewerId)) {
-        //     throw new NotFoundException("User not found");
-        // }
         return toProfileResponse(target, viewerId);
     }
 
@@ -126,13 +119,12 @@ public class UserService {
     }
 
     /** "Suggested for you" — public accounts the viewer doesn't already follow (or has a pending
-     * request to), isn't blocked with, ranked by follower count. No pagination (a short, static
+     * request to), ranked by follower count. No pagination (a short, static
      * list for a sidebar), unlike every other listing here. */
     @Transactional(readOnly = true)
     public List<UserSummary> getSuggestions(Long viewerId, int limit) {
         List<Long> excludedIds = new ArrayList<>(followRepository.findAllFolloweeIds(viewerId));
         excludedIds.add(viewerId);
-        // excludedIds.addAll(moderationService.getBlockedEitherDirectionIds(viewerId));
         return userRepository.findSuggestions(excludedIds, limit).stream()
                 .map(UserSummary::from)
                 .toList();
@@ -172,8 +164,6 @@ public class UserService {
         long followingCount = followRepository.countByFollowerIdAndStatus(target.getId(), FollowStatus.ACCEPTED);
 
         ViewerRelationship relationship = ViewerRelationship.NOT_FOLLOWING;
-        boolean viewerHasBlocked = false;
-        boolean viewerHasRestricted = false;
         if (viewerId != null) {
             if (viewerId.equals(target.getId())) {
                 relationship = ViewerRelationship.SELF;
@@ -184,8 +174,6 @@ public class UserService {
                                 ? ViewerRelationship.FOLLOWING
                                 : ViewerRelationship.REQUESTED)
                         .orElse(ViewerRelationship.NOT_FOLLOWING);
-                // viewerHasBlocked = moderationService.isBlockedEitherDirection(viewerId, target.getId());
-                // viewerHasRestricted = moderationService.isRestrictedBy(viewerId, target.getId());
             }
         }
 
@@ -201,8 +189,6 @@ public class UserService {
                 postCount,
                 followerCount,
                 followingCount,
-                relationship,
-                viewerHasBlocked,
-                viewerHasRestricted);
+                relationship);
     }
 }

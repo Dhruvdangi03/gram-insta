@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
-import { ProfileOptionsMenu } from '@/components/ProfileOptionsMenu'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
 import * as usersApi from '@/lib/api/endpoints/users'
 import type { UserProfile } from '@/lib/api/types'
@@ -56,10 +55,6 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                   <Icon name="more" />
                 </Link>
               </>
-            ) : profile.viewerHasBlocked ? (
-              // A viewer can't follow/message someone they've blocked (FollowService/MessageService
-              // both reject it server-side) — the only action left is the options menu, to unblock.
-              <ProfileOptionsMenu profile={profile} className={styles.settingsButton} />
             ) : (
               <>
                 {profile.viewerRelationship === 'FOLLOWING' ? (
@@ -80,7 +75,6 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                     Follow
                   </Button>
                 )}
-                <ProfileOptionsMenu profile={profile} className={styles.settingsButton} />
               </>
             )}
           </div>

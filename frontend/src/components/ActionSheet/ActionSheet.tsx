@@ -10,7 +10,7 @@ export interface ActionSheetAction {
 }
 
 /** Instagram's centered "..." action-sheet pattern — a list of full-width buttons in a Modal,
- * reused by post options (edit/delete/report) and profile options (block/restrict/report). */
+ * used by the post options menu (edit/delete). */
 export function ActionSheet({ onClose, actions }: { onClose: () => void; actions: ActionSheetAction[] }) {
   return (
     <Modal onClose={onClose} contentClassName={styles.content}>

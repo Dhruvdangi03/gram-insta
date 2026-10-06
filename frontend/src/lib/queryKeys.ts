@@ -8,7 +8,6 @@ export const queryKeys = {
   post: (id: number) => [...queryKeys.posts(), id] as const,
   userPosts: (username: string) => [...queryKeys.posts(), 'byUser', username] as const,
   savedPosts: () => [...queryKeys.posts(), 'saved'] as const,
-  hashtagPosts: (tag: string) => [...queryKeys.posts(), 'byHashtag', tag] as const,
   comments: (postId: number) => ['comments', postId] as const,
   users: () => ['users'] as const,
   userProfile: (username: string) => [...queryKeys.users(), username] as const,

@@ -39,9 +39,6 @@ public class FollowService {
         if (followee.getId().equals(followerId)) {
             throw new BadRequestException("You cannot follow yourself");
         }
-        // if (moderationService.isBlockedEitherDirection(followerId, followee.getId())) {
-        //     throw new ForbiddenException("You cannot follow this account");
-        // }
         if (followRepository.findByFollowerIdAndFolloweeId(followerId, followee.getId()).isPresent()) {
             throw new ConflictException("Already following, or a follow request is already pending");
         }

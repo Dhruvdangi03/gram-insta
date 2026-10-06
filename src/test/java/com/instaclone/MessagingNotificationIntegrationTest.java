@@ -230,10 +230,10 @@ class MessagingNotificationIntegrationTest {
     }
 
     @Test
-    void acceptingBlockingOrGoingPublicAlsoClearsTheOwnersRequestNotification() throws Exception {
+    void acceptingDecliningOrGoingPublicAlsoClearsTheOwnersRequestNotification() throws Exception {
         String ownerToken = register("res_owner", "res_owner@example.com");
         String acceptedToken = register("res_accepted", "res_accepted@example.com");
-        String blockedToken = register("res_blocked", "res_blocked@example.com");
+        String declinedToken = register("res_declined", "res_declined@example.com");
         String leftPendingToken = register("res_left", "res_left@example.com");
         rest.exchange(
                 "/users/me", HttpMethod.PATCH, new HttpEntity<>(Map.of("isPrivate", true), bearer(ownerToken)), Map.class);
@@ -241,7 +241,7 @@ class MessagingNotificationIntegrationTest {
         StompSession ownerSession = connect(ownerToken);
         BlockingQueue<Map> ownerNotifications = new ArrayBlockingQueue<>(10);
         ownerSession.subscribe("/user/queue/notifications", frameHandler(Map.class, ownerNotifications));
-        for (String requester : List.of(acceptedToken, blockedToken, leftPendingToken)) {
+        for (String requester : List.of(acceptedToken, declinedToken, leftPendingToken)) {
             rest.exchange("/users/res_owner/follow", HttpMethod.POST, new HttpEntity<>(null, bearer(requester)), Map.class);
         }
         for (int i = 0; i < 3; i++) {
@@ -255,9 +255,10 @@ class MessagingNotificationIntegrationTest {
                 .as("accepting resolves that request, so its notification must not linger")
                 .hasSize(2);
 
-        rest.exchange("/users/res_blocked/block", HttpMethod.POST, new HttpEntity<>(null, bearer(ownerToken)), Void.class);
+        rest.exchange(
+                "/users/res_declined/follow/reject", HttpMethod.DELETE, new HttpEntity<>(null, bearer(ownerToken)), Void.class);
         assertThat(notificationTypes(ownerToken))
-                .as("a block deletes the pending request, so it must not keep surfacing the blocked account")
+                .as("declining resolves that request, so its notification must not linger either")
                 .hasSize(1);
 
         rest.exchange(
