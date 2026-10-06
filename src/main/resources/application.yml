@@ -1,5 +1,4 @@
 server:
-  # Render injects PORT at runtime for web services; 8080 is just the local-dev default.
   port: ${PORT:8080}
   servlet:
     context-path: /api/v1

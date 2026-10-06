@@ -74,13 +74,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
-<!--		<dependency>-->
-<!--			&lt;!&ndash; Argon2PasswordEncoder needs this on the classpath; Spring Security treats it as optional &ndash;&gt;-->
-<!--			<groupId>org.bouncycastle</groupId>-->
-<!--			<artifactId>bcprov-jdk18on</artifactId>-->
-<!--			<version>1.86</version>-->
-<!--			<scope>runtime</scope>-->
-<!--		</dependency>-->
+		<dependency>
+			<!-- Argon2PasswordEncoder needs this on the classpath; Spring Security treats it as optional -->
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk18on</artifactId>
+			<version>1.86</version>
+			<scope>runtime</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
