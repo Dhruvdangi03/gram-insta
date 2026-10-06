@@ -115,17 +115,24 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("cursorId") Long cursorId,
             @Param("limit") int limit);
 
+    // Reels from the given users (followed accounts + the viewer) PLUS every public account's reels —
+    // the Reels tab is a discovery surface. Restricting it to followed accounts left a reel invisible
+    // to everyone except its uploader (who always sees their own). Private accounts' reels still
+    // require a follow.
     @Query(
-            value = "SELECT * FROM posts WHERE user_id IN (:userIds) AND type = 'REEL' AND " + READY_FILTER
-                    + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+            value = "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                    + "WHERE p.type = 'REEL' AND (p.user_id IN (:userIds) OR u.is_private = false) AND "
+                    + READY_FILTER_P
+                    + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
             nativeQuery = true)
     List<Post> findFirstReelsPageByUserIds(@Param("userIds") List<Long> userIds, @Param("limit") int limit);
 
     @Query(
             value =
-                    "SELECT * FROM posts WHERE user_id IN (:userIds) AND type = 'REEL' "
-                            + "AND (created_at, id) < (:cursorCreatedAt, :cursorId) AND " + READY_FILTER
-                            + " ORDER BY created_at DESC, id DESC LIMIT :limit",
+                    "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                            + "WHERE p.type = 'REEL' AND (p.user_id IN (:userIds) OR u.is_private = false) "
+                            + "AND (p.created_at, p.id) < (:cursorCreatedAt, :cursorId) AND " + READY_FILTER_P
+                            + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
             nativeQuery = true)
     List<Post> findReelsPageByUserIdsAfterCursor(
             @Param("userIds") List<Long> userIds,

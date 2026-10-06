@@ -97,9 +97,8 @@ public class ReelService {
         return postService.toResponse(post, UserSummary.from(author), List.of(media), false, false);
     }
 
-    /** Follows-based, mirroring FeedService.getHomeFeed exactly but filtered to type=REEL + status=READY.
-     * Always includes the viewer's own reels too — otherwise a user who just posted a reel would
-     * never see it in this feed at all, since they don't "follow" themselves. */
+    /** type=REEL + status=READY reels from followed accounts, the viewer's own, and any public
+     * account (so a new reel is visible to people who don't follow the author yet). */
     @Transactional(readOnly = true)
     public CursorPage<PostResponse> getReelsFeed(Long viewerId, String cursor, int limit) {
         List<Long> followedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));

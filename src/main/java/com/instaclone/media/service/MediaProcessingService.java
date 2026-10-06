@@ -70,11 +70,18 @@ public class MediaProcessingService {
                     "-c:v",
                     "libx264",
                     "-preset",
-                    "fast",
+                    "veryfast",
                     "-crf",
                     "23",
+                    // Phone videos are often 10-bit / 4:2:2 (HEVC, HDR); browsers can't play those
+                    // as H.264, so force the universally playable 8-bit 4:2:0 format.
+                    "-pix_fmt",
+                    "yuv420p",
                     "-c:a",
                     "aac",
+                    // moov atom at the front so the video starts playing before it fully downloads.
+                    "-movflags",
+                    "+faststart",
                     outputFile.toString()));
             log.info("FFmpeg transcode complete, output file size: {} bytes", Files.size(outputFile));
 

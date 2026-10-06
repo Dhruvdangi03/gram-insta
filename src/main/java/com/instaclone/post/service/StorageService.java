@@ -33,17 +33,20 @@ public class StorageService {
         String extension = contentType.substring(contentType.indexOf('/') + 1);
         String objectKey = "posts/%d/%s.%s".formatted(userId, UUID.randomUUID(), extension);
 
+        // builds the request
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(props.bucket())
                 .key(objectKey)
                 .contentType(contentType)
                 .build();
 
+        // specify TTL
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
                 .signatureDuration(UPLOAD_URL_TTL)
                 .putObjectRequest(putRequest)
                 .build();
 
+        // signs the request
         PresignedPutObjectRequest presigned = presigner.presignPutObject(presignRequest);
         String publicUrl = props.publicUrlFor(objectKey);
 

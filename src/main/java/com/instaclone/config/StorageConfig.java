@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -41,6 +43,12 @@ public class StorageConfig {
                         .pathStyleAccessEnabled(true)
                         .chunkedEncodingEnabled(false)
                         .build())
+                // AWS SDK v2 >= 2.30 adds a CRC32 checksum (sent as a trailing "aws-chunked" payload)
+                // to every PutObject by default. R2 doesn't accept that, so the transcode worker's
+                // upload of the 720p video/thumbnail failed, the media stayed non-READY, and the reel
+                // was only ever visible to its uploader. WHEN_REQUIRED restores the plain PUT.
+                .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+                .responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
                 .build();
     }
 
