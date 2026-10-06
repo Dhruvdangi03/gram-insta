@@ -18,6 +18,7 @@ import com.instaclone.user.UserRepository;
 import com.instaclone.user.UserSummary;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -103,7 +104,8 @@ public class CommentService {
             }
         }
 
-        return toResponse(comment, UserSummary.from(author));
+        // A freshly created comment can never already be liked by its own author.
+        return toResponse(comment, UserSummary.from(author), false);
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +125,14 @@ public class CommentService {
         Map<Long, UserSummary> authorsById = userRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, UserSummary::from));
 
+        // Mirrors PostService.enrich: one batched lookup of the viewer's liked ids among this
+        // page's comments, rather than an existence check per comment. Guard the empty-page case
+        // explicitly rather than relying on Hibernate's handling of an empty "in" list.
+        List<Long> commentIds = page.items().stream().map(Comment::getId).toList();
+        Set<Long> likedCommentIds = commentIds.isEmpty()
+                ? Set.of()
+                : new HashSet<>(likeRepository.findLikedIds(viewerId, LikeableType.COMMENT, commentIds));
+
         Long postOwnerId = post.getUser().getId();
         List<CommentResponse> items = page.items().stream()
                 // A comment from someone the post's owner has restricted is hidden from every
@@ -135,7 +145,7 @@ public class CommentService {
                     }
                     return !moderationService.isRestrictedBy(postOwnerId, authorId);
                 })
-                .map(c -> toResponse(c, authorsById.get(c.getUser().getId())))
+                .map(c -> toResponse(c, authorsById.get(c.getUser().getId()), likedCommentIds.contains(c.getId())))
                 .toList();
         return new CursorPage<>(items, page.nextCursor(), page.hasMore());
     }
@@ -167,13 +177,14 @@ public class CommentService {
         }
     }
 
-    private CommentResponse toResponse(Comment comment, UserSummary author) {
+    private CommentResponse toResponse(Comment comment, UserSummary author, boolean likedByViewer) {
         return new CommentResponse(
                 comment.getId(),
                 author,
                 comment.getText(),
                 comment.getParent() != null ? comment.getParent().getId() : null,
                 comment.getLikeCount(),
+                likedByViewer,
                 comment.getCreatedAt());
     }
 }

@@ -6,6 +6,8 @@ import com.instaclone.notification.NotificationEvent;
 import com.instaclone.notification.NotificationType;
 import com.instaclone.post.Post;
 import com.instaclone.post.PostRepository;
+import com.instaclone.social.comment.Comment;
+import com.instaclone.social.comment.CommentRepository;
 import com.instaclone.social.moderation.ModerationService;
 import com.instaclone.user.ProfileVisibilityService;
 import com.instaclone.user.User;
@@ -20,6 +22,7 @@ public class LikeService {
 
     private final LikeRepository likeRepository;
     private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
     private final UserRepository userRepository;
     private final ProfileVisibilityService profileVisibilityService;
     private final ModerationService moderationService;
@@ -28,12 +31,14 @@ public class LikeService {
     public LikeService(
             LikeRepository likeRepository,
             PostRepository postRepository,
+            CommentRepository commentRepository,
             UserRepository userRepository,
             ProfileVisibilityService profileVisibilityService,
             ModerationService moderationService,
             ApplicationEventPublisher eventPublisher) {
         this.likeRepository = likeRepository;
         this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
         this.userRepository = userRepository;
         this.profileVisibilityService = profileVisibilityService;
         this.moderationService = moderationService;
@@ -86,6 +91,72 @@ public class LikeService {
         }
 
         return new LikeCountResponse(removed ? Math.max(0, post.getLikeCount() - 1) : post.getLikeCount(), false);
+    }
+
+    @Transactional
+    public LikeCountResponse likeComment(Long userId, Long commentId) {
+        Comment comment = commentRepository
+                .findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found"));
+        User viewer = userRepository.getReferenceById(userId);
+        assertVisible(comment.getPost(), viewer);
+        // Liking is a direct interaction with the comment's author, who may not be the post
+        // owner — check the blocker relationship against both to be safe.
+        assertCanInteractWith(userId, comment.getUser().getId());
+
+        boolean alreadyLiked =
+                likeRepository.existsByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId);
+        if (!alreadyLiked) {
+            Like like = new Like();
+            like.setUser(viewer);
+            like.setLikeableType(LikeableType.COMMENT);
+            like.setLikeableId(commentId);
+            like.setCreatedAt(Instant.now());
+            likeRepository.save(like);
+
+            commentRepository.incrementLikeCount(commentId);
+
+            Long recipientId = comment.getUser().getId();
+            if (!recipientId.equals(userId)) {
+                // No standalone comment detail page to link to, so this reuses the same
+                // targetType="POST" convention CommentService already uses for comment/reply
+                // notifications, pointing at the post the comment lives on.
+                eventPublisher.publishEvent(new NotificationEvent(
+                        recipientId, userId, NotificationType.LIKE, "POST", comment.getPost().getId()));
+            }
+        }
+
+        long likeCount = alreadyLiked ? comment.getLikeCount() : comment.getLikeCount() + 1;
+        return new LikeCountResponse(likeCount, true);
+    }
+
+    @Transactional
+    public LikeCountResponse unlikeComment(Long userId, Long commentId) {
+        Comment comment = commentRepository
+                .findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found"));
+        User viewer = userRepository.getReferenceById(userId);
+        assertVisible(comment.getPost(), viewer);
+
+        boolean removed = likeRepository
+                .findByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId)
+                .map(like -> {
+                    likeRepository.delete(like);
+                    return true;
+                })
+                .orElse(false);
+        if (removed) {
+            commentRepository.decrementLikeCount(commentId);
+        }
+
+        long likeCount = removed ? Math.max(0, comment.getLikeCount() - 1) : comment.getLikeCount();
+        return new LikeCountResponse(likeCount, false);
+    }
+
+    private void assertCanInteractWith(Long viewerId, Long otherUserId) {
+        if (moderationService.isBlockedEitherDirection(viewerId, otherUserId)) {
+            throw new ForbiddenException("You can't interact with this account");
+        }
     }
 
     private void assertVisible(Post post, User viewer) {

@@ -18,6 +18,22 @@
   margin-top: var(--space-3);
 }
 
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.likeButton {
+  flex-shrink: 0;
+  align-self: flex-start;
+  color: var(--color-text-secondary);
+  padding-top: 2px;
+}
+
+.liked {
+  color: var(--color-danger);
+}
+
 .replies {
   margin-top: var(--space-1);
   padding-left: var(--space-2);

@@ -94,6 +94,7 @@ export interface Comment {
   text: string
   parentCommentId: number | null
   likeCount: number
+  likedByViewer: boolean
   createdAt: string
 }
 
