@@ -26,11 +26,11 @@ public class StoryView {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "story_id", nullable = false)
     private Story story;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "viewer_id", nullable = false)
     private User viewer;
 
