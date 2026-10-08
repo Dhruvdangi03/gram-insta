@@ -40,6 +40,12 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # The production (Neon) database was originally built by Hibernate, not by these migrations,
+    # so it has tables but no flyway_schema_history. On a non-empty schema with no history, mark
+    # it as version 12 and apply only V13+ (which are written to be safe on that Hibernate-built
+    # schema). An empty database (local/Testcontainers) is unaffected and runs V1 onward as usual.
+    baseline-on-migrate: true
+    baseline-version: 12
 
 app:
   rate-limit:

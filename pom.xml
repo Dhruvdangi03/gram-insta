@@ -65,8 +65,13 @@
 			<version>${awssdk.version}</version>
 		</dependency>
 		<dependency>
-			<!-- Spring Boot has no "starter" artifact for Flyway — flyway-core on the classpath is
-			     what FlywayAutoConfiguration looks for. -->
+			<!-- Spring Boot 4 moved FlywayAutoConfiguration out of spring-boot-autoconfigure into its
+			     own module, so flyway-core alone no longer runs migrations at startup — this starter
+			     is what brings that auto-configuration back. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
 		</dependency>
