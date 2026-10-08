@@ -9,11 +9,28 @@ export interface ActionSheetAction {
   key?: string | number
 }
 
-/** Instagram's centered "..." action-sheet pattern — a list of full-width buttons in a Modal,
- * used by the post options menu (edit/delete). */
-export function ActionSheet({ onClose, actions }: { onClose: () => void; actions: ActionSheetAction[] }) {
+/** Instagram's centered "..." action-sheet pattern — a list of full-width buttons in a Modal.
+ * An optional title/message turns it into a confirmation dialog (e.g. "Delete post?"), so a
+ * follow-up confirm step doesn't look like the same menu with an option missing. */
+export function ActionSheet({
+  onClose,
+  actions,
+  title,
+  message,
+}: {
+  onClose: () => void
+  actions: ActionSheetAction[]
+  title?: string
+  message?: string
+}) {
   return (
     <Modal onClose={onClose} contentClassName={styles.content}>
+      {title || message ? (
+        <div className={styles.header}>
+          {title ? <h2 className={styles.title}>{title}</h2> : null}
+          {message ? <p className={styles.message}>{message}</p> : null}
+        </div>
+      ) : null}
       {actions.map((action) => (
         <button
           key={action.key ?? action.label}

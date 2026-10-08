@@ -53,6 +53,8 @@ export function PostOptionsMenu({ post, className, onDeleted }: { post: Post; cl
       {showDeleteConfirm ? (
         <ActionSheet
           onClose={() => setShowDeleteConfirm(false)}
+          title="Delete post?"
+          message="Are you sure you want to delete this post?"
           actions={[
             {
               label: deleteMutation.isPending ? 'Deleting…' : 'Delete',
