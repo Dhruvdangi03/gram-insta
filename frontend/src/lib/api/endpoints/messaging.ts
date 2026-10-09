@@ -8,6 +8,7 @@ export interface CreateConversationRequest {
 export interface SendMessageRequest {
   content?: string
   mediaUrl?: string
+  sharedPostId?: number
 }
 
 export function createConversation(body: CreateConversationRequest) {

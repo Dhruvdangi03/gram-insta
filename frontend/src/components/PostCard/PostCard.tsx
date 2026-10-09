@@ -6,6 +6,7 @@ import { CaptionText } from '@/components/CaptionText'
 import { Icon } from '@/components/Icon'
 import { MediaCarousel } from '@/components/MediaCarousel'
 import { PostOptionsMenu } from '@/components/PostOptionsMenu'
+import { SharePostModal } from '@/components/SharePostModal'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
 import * as commentsApi from '@/lib/api/endpoints/comments'
 import type { Post } from '@/lib/api/types'
@@ -29,6 +30,7 @@ export function PostCard({ post, variant = 'feed' }: PostCardProps) {
   const detailLinkState = { backgroundLocation: location }
   const [showHeartBurst, setShowHeartBurst] = useState(false)
   const [commentText, setCommentText] = useState('')
+  const [showShareModal, setShowShareModal] = useState(false)
   const queryClient = useQueryClient()
 
   const likeMutation = useLikeMutation(post.id, post.likedByViewer, post.likeCount)
@@ -96,7 +98,12 @@ export function PostCard({ post, variant = 'feed' }: PostCardProps) {
         <Link to={`/p/${post.id}`} state={detailLinkState} className={styles.actionButton} aria-label="Comment">
           <Icon name="comment" />
         </Link>
-        <button type="button" className={styles.actionButton} aria-label="Share">
+        <button
+          type="button"
+          className={styles.actionButton}
+          aria-label="Share"
+          onClick={() => setShowShareModal(true)}
+        >
           <Icon name="share" />
         </button>
         <button
@@ -155,6 +162,8 @@ export function PostCard({ post, variant = 'feed' }: PostCardProps) {
           </button>
         </div>
       ) : null}
+
+      {showShareModal ? <SharePostModal post={post} onClose={() => setShowShareModal(false)} /> : null}
     </article>
   )
 }

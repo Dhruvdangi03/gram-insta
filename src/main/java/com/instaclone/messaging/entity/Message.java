@@ -1,5 +1,6 @@
 package com.instaclone.messaging.entity;
 
+import com.instaclone.post.entity.Post;
 import com.instaclone.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,6 +40,10 @@ public class Message {
 
     @Column(name = "media_url")
     private String mediaUrl;
+
+    @ManyToOne
+    @JoinColumn(name = "shared_post_id")
+    private Post sharedPost;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

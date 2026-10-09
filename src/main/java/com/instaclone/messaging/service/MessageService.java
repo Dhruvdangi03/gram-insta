@@ -14,10 +14,15 @@ import com.instaclone.messaging.entity.Message;
 import com.instaclone.messaging.event.MessageSentEvent;
 import com.instaclone.messaging.repository.ConversationRepository;
 import com.instaclone.messaging.repository.MessageRepository;
+import com.instaclone.post.dto.PostResponse;
+import com.instaclone.post.entity.Post;
+import com.instaclone.post.repository.PostRepository;
+import com.instaclone.post.service.PostService;
 import com.instaclone.user.dto.UserSummary;
 import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.user.entity.User;
 import com.instaclone.user.repository.UserRepository;
+import com.instaclone.user.service.ProfileVisibilityService;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -48,18 +53,27 @@ public class MessageService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final UserBlockRepository blockRepository;
+    private final PostRepository postRepository;
+    private final PostService postService;
+    private final ProfileVisibilityService profileVisibilityService;
 
     public MessageService(
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             UserRepository userRepository,
             ApplicationEventPublisher eventPublisher,
-            UserBlockRepository blockRepository) {
+            UserBlockRepository blockRepository,
+            PostRepository postRepository,
+            PostService postService,
+            ProfileVisibilityService profileVisibilityService) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
         this.blockRepository = blockRepository;
+        this.postRepository = postRepository;
+        this.postService = postService;
+        this.profileVisibilityService = profileVisibilityService;
     }
 
     @Transactional
@@ -134,13 +148,22 @@ public class MessageService {
         message.setSender(sender);
         message.setContent(request.content());
         message.setMediaUrl(request.mediaUrl());
+        if (request.sharedPostId() != null) {
+            Post sharedPost = postRepository
+                    .findById(request.sharedPostId())
+                    .orElseThrow(() -> new NotFoundException("Post not found"));
+            if (!profileVisibilityService.isVisible(sharedPost.getUser(), sender)) {
+                throw new ForbiddenException("This account is private");
+            }
+            message.setSharedPost(sharedPost);
+        }
         message.setCreatedAt(Instant.now());
         message = messageRepository.save(message);
 
         conversation.setLastMessageAt(message.getCreatedAt());
         conversationRepository.save(conversation);
 
-        MessageResponse response = toResponse(message, UserSummary.from(sender));
+        MessageResponse response = toResponse(message, UserSummary.from(sender), senderId);
         // Every participant, including the sender — a STOMP-originated sender otherwise never
         // learns their own message's server-assigned id/createdAt (the REST path returns it
         // directly in the response body; STOMP has no equivalent unless it's pushed back here).
@@ -166,14 +189,14 @@ public class MessageService {
                 .collect(Collectors.toMap(User::getId, UserSummary::from));
 
         List<MessageResponse> items = page.items().stream()
-                .map(m -> toResponse(m, sendersById.get(m.getSender().getId())))
+                .map(m -> toResponse(m, sendersById.get(m.getSender().getId()), viewerId))
                 .toList();
         return new CursorPage<>(items, page.nextCursor(), page.hasMore());
     }
 
     private void validate(SendMessageRequest request) {
-        if (blank(request.content()) && blank(request.mediaUrl())) {
-            throw new BadRequestException("A message needs content or a mediaUrl");
+        if (blank(request.content()) && blank(request.mediaUrl()) && request.sharedPostId() == null) {
+            throw new BadRequestException("A message needs content, a mediaUrl, or a sharedPostId");
         }
         // Enforced here rather than relying solely on SendMessageRequest's @Size, since STOMP's
         // @Payload isn't bean-validated the way @Valid @RequestBody is on the REST path — this is
@@ -220,14 +243,29 @@ public class MessageService {
         return new ConversationResponse(conversation.getId(), conversation.isGroup(), participants, conversation.getCreatedAt());
     }
 
-    private MessageResponse toResponse(Message message, UserSummary sender) {
+    private MessageResponse toResponse(Message message, UserSummary sender, Long viewerId) {
         return new MessageResponse(
                 message.getId(),
                 message.getConversation().getId(),
                 sender,
                 message.getContent(),
                 message.getMediaUrl(),
+                sharedPostResponse(message, viewerId),
                 message.getCreatedAt());
+    }
+
+    // A shared post's visibility can change after it was sent (account went private, sharer got
+    // blocked); fall back to null rather than let one stale reference break loading the rest of a
+    // conversation's history.
+    private PostResponse sharedPostResponse(Message message, Long viewerId) {
+        if (message.getSharedPost() == null) {
+            return null;
+        }
+        try {
+            return postService.getPost(message.getSharedPost().getId(), viewerId);
+        } catch (NotFoundException | ForbiddenException e) {
+            return null;
+        }
     }
 
     private static boolean blank(String s) {

@@ -66,7 +66,24 @@ export function ConversationThread() {
           return (
             <div key={message.id} className={[styles.bubbleRow, isOwn ? styles.bubbleRowOwn : ''].join(' ')}>
               {!isOwn ? <Avatar src={message.sender.profilePictureUrl} alt={message.sender.username} size={24} /> : null}
-              <div className={[styles.bubble, isOwn ? styles.bubbleOwn : ''].join(' ')}>{message.content}</div>
+              {message.sharedPost ? (
+                <Link
+                  to={`/p/${message.sharedPost.id}`}
+                  className={[styles.bubble, styles.sharedPostCard, isOwn ? styles.bubbleOwn : ''].join(' ')}
+                >
+                  <img
+                    className={styles.sharedPostThumb}
+                    src={message.sharedPost.media[0]?.thumbnailUrl ?? message.sharedPost.media[0]?.url}
+                    alt={message.sharedPost.caption || `Post by ${message.sharedPost.author.username}`}
+                  />
+                  <div className={styles.sharedPostCaption}>
+                    <span className={styles.sharedPostAuthor}>{message.sharedPost.author.username}</span>
+                    {message.sharedPost.caption ? <span>{message.sharedPost.caption}</span> : null}
+                  </div>
+                </Link>
+              ) : (
+                <div className={[styles.bubble, isOwn ? styles.bubbleOwn : ''].join(' ')}>{message.content}</div>
+              )}
             </div>
           )
         })}
