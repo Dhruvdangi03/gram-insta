@@ -5,10 +5,12 @@ import { RegisterPage } from '@/features/auth/RegisterPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { CreatePostModal } from '@/features/create-post/CreatePostModal'
 import { ExplorePage } from '@/features/explore/ExplorePage'
+import { HashtagPage } from '@/features/hashtag/HashtagPage'
 import { HomeFeedPage } from '@/features/feed/HomeFeedPage'
 import { ConversationThread } from '@/features/messaging/ConversationThread'
 import { DirectInboxPage } from '@/features/messaging/DirectInboxPage'
 import { EditProfilePage } from '@/features/profile/EditProfilePage'
+import { BlockedMutedPage } from '@/features/profile/BlockedMutedPage'
 import { FollowRequestsPage } from '@/features/profile/FollowRequestsPage'
 import { InsightsPage } from '@/features/insights/InsightsPage'
 import { NotificationsPage } from '@/features/notifications/NotificationsPage'
@@ -40,6 +42,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <HomeFeedPage /> },
       { path: 'explore', element: <ExplorePage /> },
+      { path: 'explore/tags/:tag', element: <HashtagPage /> },
       { path: 'reels', element: <ReelsPage /> },
       { path: 'create', element: <CreatePostModal /> },
       { path: 'notifications', element: <NotificationsPage /> },
@@ -52,6 +55,7 @@ export const routes: RouteObject[] = [
       { path: 'accounts/edit', element: <EditProfilePage /> },
       { path: 'accounts/insights', element: <InsightsPage /> },
       { path: 'accounts/follow-requests', element: <FollowRequestsPage /> },
+      { path: 'accounts/blocked-muted', element: <BlockedMutedPage /> },
       { path: ':username', element: <ProfilePage /> },
       { path: ':username/followers', element: <UserListModal mode="followers" /> },
       { path: ':username/following', element: <UserListModal mode="following" /> },

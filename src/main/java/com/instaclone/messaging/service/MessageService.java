@@ -15,6 +15,7 @@ import com.instaclone.messaging.event.MessageSentEvent;
 import com.instaclone.messaging.repository.ConversationRepository;
 import com.instaclone.messaging.repository.MessageRepository;
 import com.instaclone.user.dto.UserSummary;
+import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.user.entity.User;
 import com.instaclone.user.repository.UserRepository;
 import java.time.Instant;
@@ -46,16 +47,19 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final UserBlockRepository blockRepository;
 
     public MessageService(
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
             UserRepository userRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            UserBlockRepository blockRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
+        this.blockRepository = blockRepository;
     }
 
     @Transactional
@@ -78,6 +82,7 @@ public class MessageService {
         Conversation conversation;
         if (others.size() == 1) {
             Long otherId = others.get(0).getId();
+            assertNotBlocked(creatorId, otherId);
             // Serializes concurrent get-or-create calls for this pair so two callers can't both
             // pass the lookup below before either has committed its INSERT — see the repository
             // method's Javadoc. Held for the rest of this transaction, released on commit/rollback.
@@ -117,6 +122,12 @@ public class MessageService {
         Conversation conversation =
                 conversationRepository.findById(conversationId).orElseThrow(() -> new NotFoundException("Conversation not found"));
         User sender = userRepository.findById(senderId).orElseThrow(() -> new NotFoundException("User not found"));
+        if (!conversation.isGroup()) {
+            conversation.getParticipants().stream()
+                    .map(User::getId)
+                    .filter(id -> !id.equals(senderId))
+                    .forEach(otherId -> assertNotBlocked(senderId, otherId));
+        }
 
         Message message = new Message();
         message.setConversation(conversation);
@@ -183,6 +194,12 @@ public class MessageService {
         participants.add(creator);
         conversation.setParticipants(participants);
         return conversationRepository.save(conversation);
+    }
+
+    private void assertNotBlocked(Long userId, Long otherId) {
+        if (blockRepository.existsEitherWay(userId, otherId)) {
+            throw new ForbiddenException("You can't message this user");
+        }
     }
 
     private void assertParticipant(Long conversationId, Long userId) {

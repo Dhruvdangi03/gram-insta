@@ -3,14 +3,14 @@ import { useState } from 'react'
 import { ActionSheet } from '@/components/ActionSheet'
 import { EditCaptionModal } from '@/components/EditCaptionModal'
 import { Icon } from '@/components/Icon'
+import { ReportSheet } from '@/components/ReportSheet'
 import { useAuth } from '@/contexts/useAuth'
 import * as postsApi from '@/lib/api/endpoints/posts'
 import type { Post } from '@/lib/api/types'
 import { queryKeys } from '@/lib/queryKeys'
 import { removePostFromAllCaches } from '@/lib/queryHelpers'
 
-/** The post "..." menu — Edit/Delete on your own post. Someone else's post has no actions, so the
- * button isn't rendered at all there. Shared by PostCard (feed/grid) and PostDetail (modal/page)
+/** The post "..." menu — Edit/Delete on your own post, Report on someone else's. Shared by PostCard (feed/grid) and PostDetail (modal/page)
  * so the menu only exists in one place. */
 export function PostOptionsMenu({ post, className, onDeleted }: { post: Post; className?: string; onDeleted?: () => void }) {
   const { user } = useAuth()
@@ -18,6 +18,7 @@ export function PostOptionsMenu({ post, className, onDeleted }: { post: Post; cl
   const [showSheet, setShowSheet] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showReport, setShowReport] = useState(false)
 
   const isOwn = user?.username === post.author.username
 
@@ -31,7 +32,7 @@ export function PostOptionsMenu({ post, className, onDeleted }: { post: Post; cl
     onError: () => window.alert('Something went wrong deleting this post. Please try again.'),
   })
 
-  if (!isOwn) {
+  if (!user) {
     return null
   }
 
@@ -43,12 +44,17 @@ export function PostOptionsMenu({ post, className, onDeleted }: { post: Post; cl
       {showSheet ? (
         <ActionSheet
           onClose={() => setShowSheet(false)}
-          actions={[
-            { label: 'Edit', onClick: () => setShowEdit(true) },
-            { label: 'Delete', onClick: () => setShowDeleteConfirm(true), destructive: true },
-          ]}
+          actions={
+            isOwn
+              ? [
+                  { label: 'Edit', onClick: () => setShowEdit(true) },
+                  { label: 'Delete', onClick: () => setShowDeleteConfirm(true), destructive: true },
+                ]
+              : [{ label: 'Report', onClick: () => setShowReport(true), destructive: true }]
+          }
         />
       ) : null}
+      {showReport ? <ReportSheet target={{ type: 'POST', id: post.id }} onClose={() => setShowReport(false)} /> : null}
       {showEdit ? <EditCaptionModal post={post} onClose={() => setShowEdit(false)} /> : null}
       {showDeleteConfirm ? (
         <ActionSheet

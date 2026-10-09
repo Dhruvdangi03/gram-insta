@@ -18,6 +18,7 @@ import com.instaclone.social.like.repository.LikeRepository;
 import com.instaclone.user.dto.UserSummary;
 import com.instaclone.user.entity.User;
 import com.instaclone.user.repository.UserRepository;
+import com.instaclone.social.mention.service.MentionService;
 import com.instaclone.user.service.ProfileVisibilityService;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class CommentService {
     private final LikeRepository likeRepository;
     private final ProfileVisibilityService profileVisibilityService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MentionService mentionService;
 
     public CommentService(
             CommentRepository commentRepository,
@@ -46,13 +48,15 @@ public class CommentService {
             UserRepository userRepository,
             LikeRepository likeRepository,
             ProfileVisibilityService profileVisibilityService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            MentionService mentionService) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
         this.profileVisibilityService = profileVisibilityService;
         this.eventPublisher = eventPublisher;
+        this.mentionService = mentionService;
     }
 
     @Transactional
@@ -97,6 +101,14 @@ public class CommentService {
                         new NotificationEvent(parentAuthorId, userId, NotificationType.COMMENT, "POST", postId));
             }
         }
+
+        // Mentions skip anyone already notified of this comment above (post owner, replied-to author).
+        Set<Long> alreadyNotified = new HashSet<>();
+        alreadyNotified.add(postOwnerId);
+        if (parent != null) {
+            alreadyNotified.add(parent.getUser().getId());
+        }
+        mentionService.notifyCommentMentions(author, post, request.text(), alreadyNotified);
 
         // A freshly created comment can never already be liked by its own author.
         return toResponse(comment, UserSummary.from(author), false);

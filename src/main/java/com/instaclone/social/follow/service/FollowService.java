@@ -7,6 +7,7 @@ import com.instaclone.common.exception.NotFoundException;
 import com.instaclone.notification.enums.NotificationType;
 import com.instaclone.notification.event.NotificationEvent;
 import com.instaclone.notification.service.FollowRequestNotificationCleaner;
+import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.social.follow.dto.FollowStatusResponse;
 import com.instaclone.social.follow.entity.Follow;
 import com.instaclone.social.follow.enums.FollowStatus;
@@ -25,16 +26,19 @@ public class FollowService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final FollowRequestNotificationCleaner followRequestNotifications;
+    private final UserBlockRepository blockRepository;
 
     public FollowService(
             FollowRepository followRepository,
             UserRepository userRepository,
             ApplicationEventPublisher eventPublisher,
-            FollowRequestNotificationCleaner followRequestNotifications) {
+            FollowRequestNotificationCleaner followRequestNotifications,
+            UserBlockRepository blockRepository) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
         this.followRequestNotifications = followRequestNotifications;
+        this.blockRepository = blockRepository;
     }
 
     @Transactional
@@ -42,6 +46,10 @@ public class FollowService {
         User followee = userRepository.findByUsername(followeeUsername).orElseThrow(() -> new NotFoundException("User not found"));
         if (followee.getId().equals(followerId)) {
             throw new BadRequestException("You cannot follow yourself");
+        }
+        // Reported as not-found rather than forbidden so a blocked user can't tell they're blocked.
+        if (blockRepository.existsEitherWay(followerId, followee.getId())) {
+            throw new NotFoundException("User not found");
         }
         if (followRepository.findByFollowerIdAndFolloweeId(followerId, followee.getId()).isPresent()) {
             throw new ConflictException("Already following, or a follow request is already pending");

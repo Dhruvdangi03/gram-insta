@@ -14,4 +14,6 @@ public record UserProfileResponse(
         long postCount,
         long followerCount,
         long followingCount,
-        ViewerRelationship viewerRelationship) {}
+        ViewerRelationship viewerRelationship,
+        boolean blockedByViewer,
+        boolean mutedByViewer) {}

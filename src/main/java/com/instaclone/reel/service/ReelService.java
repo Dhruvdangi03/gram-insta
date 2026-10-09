@@ -16,7 +16,11 @@ import com.instaclone.post.repository.MediaRepository;
 import com.instaclone.post.repository.PostRepository;
 import com.instaclone.post.service.PostService;
 import com.instaclone.reel.dto.CreateReelRequest;
+import com.instaclone.hashtag.service.HashtagIndexService;
+import com.instaclone.social.block.repository.UserBlockRepository;
+import com.instaclone.social.mention.service.MentionService;
 import com.instaclone.social.follow.repository.FollowRepository;
+import com.instaclone.social.mute.repository.UserMuteRepository;
 import com.instaclone.user.dto.UserSummary;
 import com.instaclone.user.entity.User;
 import com.instaclone.user.repository.UserRepository;
@@ -40,6 +44,10 @@ public class ReelService {
     private final MediaRepository mediaRepository;
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final HashtagIndexService hashtagIndexService;
+    private final MentionService mentionService;
+    private final UserBlockRepository blockRepository;
+    private final UserMuteRepository muteRepository;
     private final PostService postService;
     private final StorageProperties storageProperties;
     private final ApplicationEventPublisher eventPublisher;
@@ -49,16 +57,24 @@ public class ReelService {
             MediaRepository mediaRepository,
             UserRepository userRepository,
             FollowRepository followRepository,
+            UserBlockRepository blockRepository,
+            UserMuteRepository muteRepository,
             PostService postService,
             StorageProperties storageProperties,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            HashtagIndexService hashtagIndexService,
+            MentionService mentionService) {
         this.postRepository = postRepository;
         this.mediaRepository = mediaRepository;
         this.userRepository = userRepository;
         this.followRepository = followRepository;
+        this.blockRepository = blockRepository;
+        this.muteRepository = muteRepository;
         this.postService = postService;
         this.storageProperties = storageProperties;
         this.eventPublisher = eventPublisher;
+        this.hashtagIndexService = hashtagIndexService;
+        this.mentionService = mentionService;
     }
 
     @Transactional
@@ -79,6 +95,8 @@ public class ReelService {
         post.setMediaCount(1);
         post.setCreatedAt(Instant.now());
         post = postRepository.save(post);
+        hashtagIndexService.reindex(post.getId(), post.getCaption());
+        mentionService.notifyPostMentions(author, post, null);
 
         Media media = new Media();
         media.setPost(post);
@@ -103,11 +121,18 @@ public class ReelService {
     public CursorPage<PostResponse> getReelsFeed(Long viewerId, String cursor, int limit) {
         List<Long> followedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));
         followedIds.add(viewerId);
+        // Blocks (either way) and the viewer's mutes, kept out of the "any public account" half of
+        // the query too. Never empty, so the native NOT IN stays valid SQL: see FeedService.
+        List<Long> excludedIds = new ArrayList<>(blockRepository.findBlockRelatedUserIds(viewerId));
+        excludedIds.addAll(muteRepository.findMutedIds(viewerId));
+        excludedIds.add(-1L);
+        followedIds.removeAll(excludedIds);
 
         Cursor decoded = cursor == null ? null : Cursor.decode(cursor);
         List<Post> rows = decoded == null
-                ? postRepository.findFirstReelsPageByUserIds(followedIds, limit + 1)
-                : postRepository.findReelsPageByUserIdsAfterCursor(followedIds, decoded.createdAt(), decoded.id(), limit + 1);
+                ? postRepository.findFirstReelsPageByUserIds(followedIds, excludedIds, limit + 1)
+                : postRepository.findReelsPageByUserIdsAfterCursor(
+                        followedIds, excludedIds, decoded.createdAt(), decoded.id(), limit + 1);
 
         return postService.toPage(rows, limit, viewerId);
     }

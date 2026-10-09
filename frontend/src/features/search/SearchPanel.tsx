@@ -34,6 +34,11 @@ export function SearchPanel({ onClose }: { onClose: () => void }) {
     queryFn: () => searchApi.searchUsers(debouncedQuery),
     enabled: debouncedQuery.length > 0,
   })
+  const hashtagsQuery = useQuery({
+    queryKey: queryKeys.searchHashtags(debouncedQuery),
+    queryFn: () => searchApi.searchHashtags(debouncedQuery),
+    enabled: debouncedQuery.length > 0,
+  })
   const postsQuery = useQuery({
     queryKey: queryKeys.searchPosts(debouncedQuery),
     queryFn: () => searchApi.searchPosts(debouncedQuery),
@@ -124,6 +129,24 @@ export function SearchPanel({ onClose }: { onClose: () => void }) {
                   </div>
                 </Link>
               ))}
+
+              {hashtagsQuery.data && hashtagsQuery.data.length > 0 ? (
+                <>
+                  <div className={styles.sectionHeader}>
+                    <span>Hashtags</span>
+                  </div>
+                  {hashtagsQuery.data.map((h) => (
+                    <Link key={h.tag} to={`/explore/tags/${encodeURIComponent(h.tag)}`} className={styles.row} onClick={onClose}>
+                      <div className={styles.rowText}>
+                        <span className={styles.username}>#{h.tag}</span>
+                        <span className={styles.fullName}>
+                          {h.postCount} {h.postCount === 1 ? 'post' : 'posts'}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </>
+              ) : null}
 
               {postsQuery.data && postsQuery.data.length > 0 ? (
                 <>

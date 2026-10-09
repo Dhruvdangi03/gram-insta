@@ -1,7 +1,10 @@
 import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
+import { ReportSheet } from '@/components/ReportSheet'
+import { RichText } from '@/components/RichText'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
 import { useAuth } from '@/contexts/useAuth'
 import * as commentsApi from '@/lib/api/endpoints/comments'
@@ -91,6 +94,7 @@ function CommentRow({
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const [showReport, setShowReport] = useState(false)
   const deleteMutation = useMutation({
     mutationFn: () => commentsApi.deleteComment(comment.id),
     onSuccess: () => {
@@ -144,7 +148,7 @@ function CommentRow({
             {comment.author.username}
             {comment.author.isVerified ? <VerifiedBadge size={11} className={styles.verifiedBadge} /> : null}
           </Link>
-          {comment.text}
+          <RichText text={comment.text} linkClassName={styles.entityLink} />
         </p>
         <div className={styles.meta}>
           <span className={styles.timestamp}>{formatRelativeTime(comment.createdAt)}</span>
@@ -169,8 +173,15 @@ function CommentRow({
             >
               Delete
             </button>
-          ) : null}
+          ) : (
+            <button type="button" className={styles.replyButton} onClick={() => setShowReport(true)}>
+              Report
+            </button>
+          )}
         </div>
+        {showReport ? (
+          <ReportSheet target={{ type: 'COMMENT', id: comment.id }} onClose={() => setShowReport(false)} />
+        ) : null}
         {replies && replies.length > 0 ? (
           <div className={styles.replies}>
             {replies.map((reply) => (

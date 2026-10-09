@@ -21,6 +21,10 @@ function describe(notification: Notification): string {
       return 'requested to follow you.'
     case 'FOLLOW_REQUEST_ACCEPTED':
       return 'accepted your follow request.'
+    case 'MENTION_POST':
+      return 'mentioned you in a post.'
+    case 'MENTION_COMMENT':
+      return 'mentioned you in a comment.'
   }
 }
 

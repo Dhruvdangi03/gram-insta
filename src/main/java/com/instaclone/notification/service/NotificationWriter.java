@@ -4,6 +4,7 @@ import com.instaclone.common.exception.NotFoundException;
 import com.instaclone.notification.entity.Notification;
 import com.instaclone.notification.enums.NotificationType;
 import com.instaclone.notification.repository.NotificationRepository;
+import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.social.follow.enums.FollowStatus;
 import com.instaclone.social.follow.repository.FollowRepository;
 import com.instaclone.user.entity.User;
@@ -25,12 +26,17 @@ public class NotificationWriter {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final UserBlockRepository blockRepository;
 
     NotificationWriter(
-            NotificationRepository notificationRepository, UserRepository userRepository, FollowRepository followRepository) {
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            FollowRepository followRepository,
+            UserBlockRepository blockRepository) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.followRepository = followRepository;
+        this.blockRepository = blockRepository;
     }
 
     /** Empty when the event is no longer worth a notification (see isStillAWorthwhileFollowRequest). */
@@ -39,6 +45,11 @@ public class NotificationWriter {
         Long actorId = Long.valueOf(body.get("actorId"));
         Long recipientId = Long.valueOf(body.get("recipientId"));
         NotificationType type = NotificationType.valueOf(body.get("type"));
+        // Written asynchronously, so a block placed after the triggering action but before this runs
+        // must still suppress it.
+        if (blockRepository.existsEitherWay(actorId, recipientId)) {
+            return Optional.empty();
+        }
         if (type == NotificationType.FOLLOW_REQUEST && !isStillAWorthwhileFollowRequest(actorId, recipientId)) {
             return Optional.empty();
         }

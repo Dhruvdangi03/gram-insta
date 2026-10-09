@@ -6,6 +6,8 @@ import com.instaclone.search.dto.PostSearchResult;
 import com.instaclone.search.dto.UserSearchResult;
 import com.instaclone.user.entity.User;
 import com.instaclone.user.repository.UserRepository;
+import com.instaclone.social.block.repository.UserBlockRepository;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,10 +27,13 @@ public class SearchService {
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final UserBlockRepository blockRepository;
 
-    public SearchService(UserRepository userRepository, PostRepository postRepository) {
+    public SearchService(
+            UserRepository userRepository, PostRepository postRepository, UserBlockRepository blockRepository) {
         this.userRepository = userRepository;
         this.postRepository = postRepository;
+        this.blockRepository = blockRepository;
     }
 
     @Transactional(readOnly = true)
@@ -48,7 +53,9 @@ public class SearchService {
     }
 
     private List<Long> excludedIds(Long viewerId) {
-        return List.of(viewerId);
+        List<Long> ids = new ArrayList<>(blockRepository.findBlockRelatedUserIds(viewerId));
+        ids.add(viewerId);
+        return ids;
     }
 
     private static UserSearchResult toUserResult(User user) {
