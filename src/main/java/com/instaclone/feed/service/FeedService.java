@@ -10,7 +10,11 @@ import com.instaclone.post.service.PostService;
 import com.instaclone.social.follow.repository.FollowRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import com.instaclone.social.block.repository.UserBlockRepository;
+import com.instaclone.social.mute.repository.UserMuteRepository;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,19 +32,34 @@ public class FeedService {
     private final FollowRepository followRepository;
     private final PostRepository postRepository;
     private final PostService postService;
+    private final UserBlockRepository blockRepository;
+    private final UserMuteRepository muteRepository;
 
     public FeedService(
             FollowRepository followRepository,
             PostRepository postRepository,
-            PostService postService) {
+            PostService postService,
+            UserBlockRepository blockRepository,
+            UserMuteRepository muteRepository) {
         this.followRepository = followRepository;
         this.postRepository = postRepository;
         this.postService = postService;
+        this.blockRepository = blockRepository;
+        this.muteRepository = muteRepository;
+    }
+
+    /** Accounts whose content must stay out of the viewer's feeds: blocks in either direction plus
+     * the viewer's own mutes. */
+    private Set<Long> hiddenUserIds(Long viewerId) {
+        Set<Long> hidden = new HashSet<>(blockRepository.findBlockRelatedUserIds(viewerId));
+        hidden.addAll(muteRepository.findMutedIds(viewerId));
+        return hidden;
     }
 
     @Transactional(readOnly = true)
     public CursorPage<PostResponse> getHomeFeed(Long viewerId, String cursor, int limit) {
-        List<Long> followedIds = followRepository.findAcceptedFolloweeIds(viewerId);
+        List<Long> followedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));
+        followedIds.removeAll(hiddenUserIds(viewerId));
         if (followedIds.isEmpty()) {
             return new CursorPage<>(List.of(), null, false);
         }
@@ -74,6 +93,7 @@ public class FeedService {
     public CursorPage<PostResponse> getExploreFeed(Long viewerId, String cursor, int limit) {
         List<Long> excludedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));
         excludedIds.add(viewerId);
+        excludedIds.addAll(hiddenUserIds(viewerId));
         List<Long> excludedPostIds = excludedPostIds(viewerId);
         Instant since = Instant.now().minus(EXPLORE_WINDOW_DAYS, ChronoUnit.DAYS);
 

@@ -29,6 +29,12 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             + "where f.followee.id = :userId and f.status = com.instaclone.social.follow.enums.FollowStatus.PENDING")
     void acceptAllPendingForFollowee(@Param("userId") Long userId);
 
+    /** Removes the follow edge in both directions — used when one user blocks the other. */
+    @Modifying
+    @Query("delete from Follow f where (f.follower.id = :a and f.followee.id = :b) "
+            + "or (f.follower.id = :b and f.followee.id = :a)")
+    void deleteBetween(@Param("a") Long a, @Param("b") Long b);
+
     @Query(
             value = "SELECT followee_id FROM follows WHERE follower_id = :followerId AND status = 'ACCEPTED'",
             nativeQuery = true)

@@ -6,6 +6,8 @@ import com.instaclone.common.pagination.Cursor;
 import com.instaclone.common.pagination.CursorPage;
 import com.instaclone.notification.service.FollowRequestNotificationCleaner;
 import com.instaclone.post.repository.PostRepository;
+import com.instaclone.social.block.repository.UserBlockRepository;
+import com.instaclone.social.mute.repository.UserMuteRepository;
 import com.instaclone.social.follow.dto.FollowUserRow;
 import com.instaclone.social.follow.enums.FollowStatus;
 import com.instaclone.social.follow.repository.FollowRepository;
@@ -30,18 +32,24 @@ public class UserService {
     private final PostRepository postRepository;
     private final ProfileVisibilityService profileVisibilityService;
     private final FollowRequestNotificationCleaner followRequestNotifications;
+    private final UserBlockRepository blockRepository;
+    private final UserMuteRepository muteRepository;
 
     public UserService(
             UserRepository userRepository,
             FollowRepository followRepository,
             PostRepository postRepository,
             ProfileVisibilityService profileVisibilityService,
-            FollowRequestNotificationCleaner followRequestNotifications) {
+            FollowRequestNotificationCleaner followRequestNotifications,
+            UserBlockRepository blockRepository,
+            UserMuteRepository muteRepository) {
         this.userRepository = userRepository;
         this.followRepository = followRepository;
         this.postRepository = postRepository;
         this.profileVisibilityService = profileVisibilityService;
         this.followRequestNotifications = followRequestNotifications;
+        this.blockRepository = blockRepository;
+        this.muteRepository = muteRepository;
     }
 
     public User findByUsernameOrThrow(String username) {
@@ -54,6 +62,13 @@ public class UserService {
 
     public UserProfileResponse getProfile(String username, Long viewerId) {
         User target = findByUsernameOrThrow(username);
+        // A user who has been blocked by the target gets the same answer as for a nonexistent
+        // account. The blocker still sees the profile (to be able to unblock).
+        if (viewerId != null
+                && !viewerId.equals(target.getId())
+                && blockRepository.existsByBlockerIdAndBlockedId(target.getId(), viewerId)) {
+            throw new NotFoundException("User not found");
+        }
         return toProfileResponse(target, viewerId);
     }
 
@@ -132,6 +147,7 @@ public class UserService {
     public List<UserSummary> getSuggestions(Long viewerId, int limit) {
         List<Long> excludedIds = new ArrayList<>(followRepository.findAllFolloweeIds(viewerId));
         excludedIds.add(viewerId);
+        excludedIds.addAll(blockRepository.findBlockRelatedUserIds(viewerId));
         return userRepository.findSuggestions(excludedIds, limit).stream()
                 .map(UserSummary::from)
                 .toList();
@@ -171,7 +187,11 @@ public class UserService {
         long followingCount = followRepository.countByFollowerIdAndStatus(target.getId(), FollowStatus.ACCEPTED);
 
         ViewerRelationship relationship = ViewerRelationship.NOT_FOLLOWING;
+        boolean blockedByViewer = false;
+        boolean mutedByViewer = false;
         if (viewerId != null) {
+            blockedByViewer = blockRepository.existsByBlockerIdAndBlockedId(viewerId, target.getId());
+            mutedByViewer = muteRepository.existsByMuterIdAndMutedId(viewerId, target.getId());
             if (viewerId.equals(target.getId())) {
                 relationship = ViewerRelationship.SELF;
             } else {
@@ -196,6 +216,8 @@ public class UserService {
                 postCount,
                 followerCount,
                 followingCount,
-                relationship);
+                relationship,
+                blockedByViewer,
+                mutedByViewer);
     }
 }

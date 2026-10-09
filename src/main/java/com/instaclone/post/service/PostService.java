@@ -6,6 +6,7 @@ import com.instaclone.common.exception.NotFoundException;
 import com.instaclone.common.pagination.Cursor;
 import com.instaclone.common.pagination.CursorPage;
 import com.instaclone.config.properties.StorageProperties;
+import com.instaclone.hashtag.service.HashtagIndexService;
 import com.instaclone.notification.repository.NotificationRepository;
 import com.instaclone.post.dto.CreatePostRequest;
 import com.instaclone.post.dto.MediaResponse;
@@ -20,6 +21,7 @@ import com.instaclone.post.repository.PostRepository;
 import com.instaclone.social.comment.repository.CommentRepository;
 import com.instaclone.social.like.enums.LikeableType;
 import com.instaclone.social.like.repository.LikeRepository;
+import com.instaclone.social.mention.service.MentionService;
 import com.instaclone.social.saved.repository.SavedPostRepository;
 import com.instaclone.user.dto.UserSummary;
 import com.instaclone.user.entity.User;
@@ -39,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final HashtagIndexService hashtagIndexService;
+    private final MentionService mentionService;
     private final MediaRepository mediaRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
@@ -57,7 +61,9 @@ public class PostService {
             SavedPostRepository savedPostRepository,
             ProfileVisibilityService profileVisibilityService,
             StorageProperties storageProperties,
-            NotificationRepository notificationRepository) {
+            NotificationRepository notificationRepository,
+            HashtagIndexService hashtagIndexService,
+            MentionService mentionService) {
         this.postRepository = postRepository;
         this.mediaRepository = mediaRepository;
         this.userRepository = userRepository;
@@ -67,6 +73,8 @@ public class PostService {
         this.profileVisibilityService = profileVisibilityService;
         this.storageProperties = storageProperties;
         this.notificationRepository = notificationRepository;
+        this.hashtagIndexService = hashtagIndexService;
+        this.mentionService = mentionService;
     }
 
     @Transactional
@@ -100,6 +108,8 @@ public class PostService {
             m.setPosition(position++);
             media.add(mediaRepository.save(m));
         }
+        hashtagIndexService.reindex(post.getId(), post.getCaption());
+        mentionService.notifyPostMentions(author, post, null);
 
         return toResponse(post, UserSummary.from(author), media, false, false);
     }
@@ -125,7 +135,10 @@ public class PostService {
 
         // A null field means "not part of this patch" (omitted); an explicit "" clears it.
         if (request.caption() != null) {
+            String previousCaption = post.getCaption();
             post.setCaption(request.caption());
+            hashtagIndexService.reindex(postId, request.caption());
+            mentionService.notifyPostMentions(post.getUser(), post, previousCaption);
         }
         if (request.location() != null) {
             post.setLocation(request.location());

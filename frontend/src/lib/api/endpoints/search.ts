@@ -1,5 +1,5 @@
 import { apiFetch, buildQuery } from '../client'
-import type { PostSearchResult, UserSearchResult } from '../types'
+import type { HashtagSummary, PostSearchResult, UserSearchResult } from '../types'
 
 /**
  * The backend's `q` param is required — calling it with an empty query throws an unhandled 500
@@ -14,4 +14,9 @@ export function searchUsers(q: string, limit?: number) {
 export function searchPosts(q: string, limit?: number) {
   if (!q.trim()) return Promise.resolve<PostSearchResult[]>([])
   return apiFetch<PostSearchResult[]>(`/search/posts${buildQuery({ q, limit })}`)
+}
+
+export function searchHashtags(q: string, limit?: number) {
+  if (!q.trim()) return Promise.resolve<HashtagSummary[]>([])
+  return apiFetch<HashtagSummary[]>(`/search/hashtags${buildQuery({ q, limit })}`)
 }

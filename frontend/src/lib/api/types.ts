@@ -39,6 +39,8 @@ export interface UserProfile {
   followerCount: number
   followingCount: number
   viewerRelationship: ViewerRelationship
+  blockedByViewer: boolean
+  mutedByViewer: boolean
 }
 
 export interface AuthTokens {
@@ -140,7 +142,19 @@ export interface StoryHighlightDetail extends StoryHighlight {
   items: StoryHighlightItem[]
 }
 
-export type NotificationType = 'LIKE' | 'COMMENT' | 'FOLLOW' | 'FOLLOW_REQUEST' | 'FOLLOW_REQUEST_ACCEPTED'
+export type NotificationType =
+  | 'LIKE'
+  | 'COMMENT'
+  | 'FOLLOW'
+  | 'FOLLOW_REQUEST'
+  | 'FOLLOW_REQUEST_ACCEPTED'
+  | 'MENTION_POST'
+  | 'MENTION_COMMENT'
+
+export interface HashtagSummary {
+  tag: string
+  postCount: number
+}
 
 export interface Notification {
   id: number

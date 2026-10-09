@@ -85,3 +85,8 @@
 .sentinel {
   height: 1px;
 }
+
+.entityLink {
+  color: var(--color-link, #00376b);
+  text-decoration: none;
+}

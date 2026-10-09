@@ -145,21 +145,25 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     // require a follow.
     @Query(
             value = "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
-                    + "WHERE p.type = 'REEL' AND (p.user_id IN (:userIds) OR u.is_private = false) AND "
+                    + "WHERE p.type = 'REEL' AND (p.user_id IN (:userIds) OR u.is_private = false) "
+                    + "AND p.user_id NOT IN (:excludedIds) AND "
                     + READY_FILTER_P
                     + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
             nativeQuery = true)
-    List<Post> findFirstReelsPageByUserIds(@Param("userIds") List<Long> userIds, @Param("limit") int limit);
+    List<Post> findFirstReelsPageByUserIds(
+            @Param("userIds") List<Long> userIds, @Param("excludedIds") List<Long> excludedIds, @Param("limit") int limit);
 
     @Query(
             value =
                     "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
                             + "WHERE p.type = 'REEL' AND (p.user_id IN (:userIds) OR u.is_private = false) "
+                            + "AND p.user_id NOT IN (:excludedIds) "
                             + "AND (p.created_at, p.id) < (:cursorCreatedAt, :cursorId) AND " + READY_FILTER_P
                             + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
             nativeQuery = true)
     List<Post> findReelsPageByUserIdsAfterCursor(
             @Param("userIds") List<Long> userIds,
+            @Param("excludedIds") List<Long> excludedIds,
             @Param("cursorCreatedAt") Instant cursorCreatedAt,
             @Param("cursorId") Long cursorId,
             @Param("limit") int limit);
@@ -197,6 +201,33 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             @Param("excludedPostIds") List<Long> excludedPostIds,
             @Param("since") Instant since,
             @Param("cursorRank") long cursorRank,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    // Posts carrying a hashtag (see HashtagIndexService): public accounts only, like Explore, and
+    // excludedIds (blocks; never empty, see HashtagService) keeps either side of a block out.
+    @Query(
+            value = "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                    + "JOIN post_hashtags h ON h.post_id = p.id "
+                    + "WHERE h.tag = :tag AND u.is_private = false AND p.user_id NOT IN (:excludedIds) AND "
+                    + READY_FILTER_P
+                    + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findByHashtagFirstPage(
+            @Param("tag") String tag, @Param("excludedIds") List<Long> excludedIds, @Param("limit") int limit);
+
+    @Query(
+            value = "SELECT p.* FROM posts p JOIN users u ON u.id = p.user_id "
+                    + "JOIN post_hashtags h ON h.post_id = p.id "
+                    + "WHERE h.tag = :tag AND u.is_private = false AND p.user_id NOT IN (:excludedIds) "
+                    + "AND (p.created_at, p.id) < (:cursorCreatedAt, :cursorId) AND "
+                    + READY_FILTER_P
+                    + " ORDER BY p.created_at DESC, p.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Post> findByHashtagAfterCursor(
+            @Param("tag") String tag,
+            @Param("excludedIds") List<Long> excludedIds,
+            @Param("cursorCreatedAt") Instant cursorCreatedAt,
             @Param("cursorId") Long cursorId,
             @Param("limit") int limit);
 

@@ -1,5 +1,5 @@
-import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
+import { RichText } from '@/components/RichText'
 
 export interface CaptionTextProps {
   username: string
@@ -11,7 +11,7 @@ export interface CaptionTextProps {
   showUsername?: boolean
 }
 
-/** Renders "username caption text" with the username linked to the profile and #tags highlighted (plain text, not links) — shared by PostCard, PostDetail, and ReelItem so caption parsing lives in one place. */
+/** Renders "username caption text" with the username linked to the profile and @mentions / #hashtags linked via RichText — shared by PostCard, PostDetail, and ReelItem so caption parsing lives in one place. */
 export function CaptionText({
   username,
   caption,
@@ -20,7 +20,6 @@ export function CaptionText({
   className,
   showUsername = true,
 }: CaptionTextProps) {
-  const parts = caption.split(/(#\w+)/g)
   return (
     <p className={className}>
       {showUsername ? (
@@ -28,15 +27,7 @@ export function CaptionText({
           {username}
         </Link>
       ) : null}
-      {parts.map((part, i) =>
-        part.startsWith('#') ? (
-          <span key={i} className={hashtagClassName}>
-            {part}
-          </span>
-        ) : (
-          <Fragment key={i}>{part}</Fragment>
-        ),
-      )}
+      <RichText text={caption} linkClassName={hashtagClassName} />
     </p>
   )
 }

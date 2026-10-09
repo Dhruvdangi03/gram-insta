@@ -7,7 +7,9 @@ import com.instaclone.common.pagination.Cursor;
 import com.instaclone.common.pagination.CursorPage;
 import com.instaclone.config.properties.StorageProperties;
 import com.instaclone.config.properties.StoryProperties;
+import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.social.follow.repository.FollowRepository;
+import com.instaclone.social.mute.repository.UserMuteRepository;
 import com.instaclone.story.dto.CreateStoryRequest;
 import com.instaclone.story.dto.StoryResponse;
 import com.instaclone.story.entity.Story;
@@ -20,6 +22,7 @@ import com.instaclone.user.repository.UserRepository;
 import com.instaclone.user.service.ProfileVisibilityService;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +38,8 @@ public class StoryService {
     private final StoryRepository storyRepository;
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final UserBlockRepository blockRepository;
+    private final UserMuteRepository muteRepository;
     private final ProfileVisibilityService profileVisibilityService;
     private final StorageProperties storageProperties;
     private final StoryProperties storyProperties;
@@ -45,6 +50,8 @@ public class StoryService {
             StoryRepository storyRepository,
             UserRepository userRepository,
             FollowRepository followRepository,
+            UserBlockRepository blockRepository,
+            UserMuteRepository muteRepository,
             ProfileVisibilityService profileVisibilityService,
             StorageProperties storageProperties,
             StoryProperties storyProperties,
@@ -53,6 +60,8 @@ public class StoryService {
         this.storyRepository = storyRepository;
         this.userRepository = userRepository;
         this.followRepository = followRepository;
+        this.blockRepository = blockRepository;
+        this.muteRepository = muteRepository;
         this.profileVisibilityService = profileVisibilityService;
         this.storageProperties = storageProperties;
         this.storyProperties = storyProperties;
@@ -125,7 +134,9 @@ public class StoryService {
     /** Follows-based, mirroring FeedService.getHomeFeed — if you're an accepted follower you can already see their content. */
     @Transactional(readOnly = true)
     public CursorPage<StoryResponse> getStoriesFeed(Long viewerId, String cursor, int limit) {
-        List<Long> followedIds = followRepository.findAcceptedFolloweeIds(viewerId);
+        List<Long> followedIds = new ArrayList<>(followRepository.findAcceptedFolloweeIds(viewerId));
+        followedIds.removeAll(blockRepository.findBlockRelatedUserIds(viewerId));
+        followedIds.removeAll(muteRepository.findMutedIds(viewerId));
         if (followedIds.isEmpty()) {
             return new CursorPage<>(List.of(), null, false);
         }

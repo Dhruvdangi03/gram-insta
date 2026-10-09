@@ -1,18 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
+import { ReportSheet } from '@/components/ReportSheet'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
 import * as usersApi from '@/lib/api/endpoints/users'
 import type { UserProfile } from '@/lib/api/types'
+import { useBlockMuteMutation } from '@/lib/hooks/useBlockMuteMutation'
 import { useFollowMutation } from '@/lib/hooks/useFollowMutation'
 import { queryKeys } from '@/lib/queryKeys'
 import styles from './ProfileHeader.module.css'
 
 export function ProfileHeader({ profile }: { profile: UserProfile }) {
   const location = useLocation()
+  const [showReport, setShowReport] = useState(false)
   const { follow, unfollow } = useFollowMutation(profile.username, profile)
+  const { block, unblock, mute, unmute } = useBlockMuteMutation(profile.username)
   const isSelfPrivate = profile.viewerRelationship === 'SELF' && profile.isPrivate
   // Shares queryKeys.followRequests() with FollowRequestsPage, so accepting/declining a request
   // there keeps this count in sync without a separate invalidation.
@@ -51,12 +56,21 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                     </Button>
                   </Link>
                 ) : null}
+                <Link to="/accounts/blocked-muted">
+                  <Button variant="secondary">Blocked &amp; muted</Button>
+                </Link>
                 <Link to="/accounts/edit" className={styles.settingsButton} aria-label="Settings">
                   <Icon name="more" />
                 </Link>
               </>
             ) : (
               <>
+                {profile.blockedByViewer ? (
+                  <Button variant="secondary" onClick={() => unblock.mutate()} loading={unblock.isPending}>
+                    Unblock
+                  </Button>
+                ) : (
+                  <>
                 {profile.viewerRelationship === 'FOLLOWING' ? (
                   <>
                     <Button variant="secondary" onClick={() => unfollow.mutate()} loading={unfollow.isPending}>
@@ -74,6 +88,29 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                   <Button onClick={() => follow.mutate()} loading={follow.isPending}>
                     Follow
                   </Button>
+                )}
+                    <Button
+                      variant="secondary"
+                      onClick={() => (profile.mutedByViewer ? unmute.mutate() : mute.mutate())}
+                      loading={mute.isPending || unmute.isPending}
+                    >
+                      {profile.mutedByViewer ? 'Unmute' : 'Mute'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (window.confirm(`Block ${profile.username}? They won't be able to find your profile or posts.`)) {
+                          block.mutate()
+                        }
+                      }}
+                      loading={block.isPending}
+                    >
+                      Block
+                    </Button>
+                    <Button variant="secondary" onClick={() => setShowReport(true)}>
+                      Report
+                    </Button>
+                  </>
                 )}
               </>
             )}
@@ -99,6 +136,7 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
         {profile.fullName ? <p className={styles.fullName}>{profile.fullName}</p> : null}
         {profile.bio ? <p className={styles.bio}>{profile.bio}</p> : null}
       </div>
+      {showReport ? <ReportSheet target={{ type: 'USER', username: profile.username }} onClose={() => setShowReport(false)} /> : null}
     </header>
   )
 }
