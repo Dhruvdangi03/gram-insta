@@ -17,3 +17,7 @@ export function getComments(postId: number, cursor?: string, limit?: number) {
 export function deleteComment(id: number) {
   return apiFetch<void>(`/comments/${id}`, { method: 'DELETE' })
 }
+
+export function approveComment(id: number) {
+  return apiFetch<void>(`/comments/${id}/approve`, { method: 'POST' })
+}

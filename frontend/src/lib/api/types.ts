@@ -41,6 +41,7 @@ export interface UserProfile {
   viewerRelationship: ViewerRelationship
   blockedByViewer: boolean
   mutedByViewer: boolean
+  restrictedByViewer: boolean
 }
 
 export interface AuthTokens {
@@ -95,6 +96,8 @@ export interface Comment {
   likeCount: number
   likedByViewer: boolean
   createdAt: string
+  /** True only for the post owner viewing a restricted user's comment that still needs approval. */
+  pendingApproval: boolean
 }
 
 export type FollowStatus = 'PENDING' | 'ACCEPTED'

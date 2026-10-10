@@ -14,6 +14,7 @@ export const queryKeys = {
   suggestions: () => [...queryKeys.users(), 'suggestions'] as const,
   followRequests: () => [...queryKeys.users(), 'followRequests'] as const,
   blockedUsers: () => [...queryKeys.users(), 'me', 'blocked'] as const,
+  restrictedUsers: () => [...queryKeys.users(), 'me', 'restricted'] as const,
   mutedUsers: () => [...queryKeys.users(), 'me', 'muted'] as const,
   insights: () => [...queryKeys.users(), 'me', 'insights'] as const,
   followers: (username: string) => [...queryKeys.users(), username, 'followers'] as const,

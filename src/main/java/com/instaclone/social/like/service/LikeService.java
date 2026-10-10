@@ -100,6 +100,9 @@ public class LikeService {
                 .orElseThrow(() -> new NotFoundException("Comment not found"));
         User viewer = userRepository.getReferenceById(userId);
         assertVisible(comment.getPost(), viewer);
+        if (!comment.isVisibleTo(userId)) {
+            throw new NotFoundException("Comment not found"); // restricted user's comment awaiting approval
+        }
 
         boolean alreadyLiked =
                 likeRepository.existsByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId);
@@ -134,6 +137,9 @@ public class LikeService {
                 .orElseThrow(() -> new NotFoundException("Comment not found"));
         User viewer = userRepository.getReferenceById(userId);
         assertVisible(comment.getPost(), viewer);
+        if (!comment.isVisibleTo(userId)) {
+            throw new NotFoundException("Comment not found"); // restricted user's comment awaiting approval
+        }
 
         boolean removed = likeRepository
                 .findByUserIdAndLikeableTypeAndLikeableId(userId, LikeableType.COMMENT, commentId)

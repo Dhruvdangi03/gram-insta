@@ -21,6 +21,7 @@ import com.instaclone.post.dto.PostResponse;
 import com.instaclone.post.entity.Post;
 import com.instaclone.post.repository.PostRepository;
 import com.instaclone.post.service.PostService;
+import com.instaclone.social.restrict.repository.UserRestrictionRepository;
 import com.instaclone.social.follow.enums.FollowStatus;
 import com.instaclone.social.follow.repository.FollowRepository;
 import com.instaclone.user.dto.UserSummary;
@@ -63,6 +64,7 @@ public class MessageService {
     private final PostService postService;
     private final ProfileVisibilityService profileVisibilityService;
     private final FollowRepository followRepository;
+    private final UserRestrictionRepository restrictionRepository;
 
     public MessageService(
             ConversationRepository conversationRepository,
@@ -73,7 +75,8 @@ public class MessageService {
             PostRepository postRepository,
             PostService postService,
             ProfileVisibilityService profileVisibilityService,
-            FollowRepository followRepository) {
+            FollowRepository followRepository,
+            UserRestrictionRepository restrictionRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
@@ -83,6 +86,7 @@ public class MessageService {
         this.postService = postService;
         this.profileVisibilityService = profileVisibilityService;
         this.followRepository = followRepository;
+        this.restrictionRepository = restrictionRepository;
     }
 
     @Transactional
@@ -111,8 +115,10 @@ public class MessageService {
             // method's Javadoc. Held for the rest of this transaction, released on commit/rollback.
             conversationRepository.acquireOneToOneConversationLock(Math.min(creatorId, otherId), Math.max(creatorId, otherId));
             // A first contact from someone the recipient doesn't follow is a message request.
+            // A recipient who has restricted the creator also gets it as a request, even if they follow.
             boolean recipientFollowsCreator = followRepository.existsByFollowerIdAndFolloweeIdAndStatus(
-                    otherId, creatorId, FollowStatus.ACCEPTED);
+                            otherId, creatorId, FollowStatus.ACCEPTED)
+                    && !restrictionRepository.existsByRestrictorIdAndRestrictedId(otherId, creatorId);
             conversation = conversationRepository
                     .findOneToOneConversation(creatorId, otherId)
                     .orElseGet(() -> {
@@ -128,7 +134,7 @@ public class MessageService {
         } else {
             conversation = createConversation(creator, others, true);
         }
-        return toResponse(conversation);
+        return toResponse(conversation, creatorId);
     }
 
     @Transactional(readOnly = true)
@@ -141,7 +147,7 @@ public class MessageService {
 
         CursorPage<Conversation> page =
                 CursorPage.of(rows, limit, c -> new Cursor(lastActivity(c), c.getId()).encode());
-        List<ConversationResponse> items = page.items().stream().map(this::toResponse).toList();
+        List<ConversationResponse> items = page.items().stream().map(c -> toResponse(c, userId)).toList();
         return new CursorPage<>(items, page.nextCursor(), page.hasMore());
     }
 
@@ -165,7 +171,21 @@ public class MessageService {
         }
 
         boolean accepted = false;
-        if (conversation.getStatus() == ConversationStatus.PENDING) {
+        boolean restrictedSender = !conversation.isGroup()
+                && conversation.getParticipants().stream()
+                        .map(User::getId)
+                        .filter(id -> !id.equals(senderId))
+                        .anyMatch(id -> restrictionRepository.existsByRestrictorIdAndRestrictedId(id, senderId));
+        if (restrictedSender) {
+            // A restricted sender's messages always land in the restrictor's requests. No
+            // one-message cap here and no auto-accept: either would tip them off.
+            if (conversation.getStatus() != ConversationStatus.PENDING
+                    || !senderId.equals(conversation.getInitiatorId())) {
+                conversation.setStatus(ConversationStatus.PENDING);
+                conversation.setInitiatorId(senderId);
+                accepted = true; // reuse: publishes a conversation-changed push below
+            }
+        } else if (conversation.getStatus() == ConversationStatus.PENDING) {
             if (senderId.equals(conversation.getInitiatorId())) {
                 // Like Instagram: one message to introduce yourself, then wait for acceptance.
                 if (messageRepository.countByConversationId(conversationId) >= MAX_MESSAGES_BEFORE_ACCEPT) {
@@ -220,7 +240,7 @@ public class MessageService {
 
         CursorPage<Conversation> page =
                 CursorPage.of(rows, limit, c -> new Cursor(lastActivity(c), c.getId()).encode());
-        List<ConversationResponse> items = page.items().stream().map(this::toResponse).toList();
+        List<ConversationResponse> items = page.items().stream().map(c -> toResponse(c, userId)).toList();
         return new CursorPage<>(items, page.nextCursor(), page.hasMore());
     }
 
@@ -235,7 +255,7 @@ public class MessageService {
         conversation.setStatus(ConversationStatus.ACCEPTED);
         conversation = conversationRepository.save(conversation);
         eventPublisher.publishEvent(new ConversationChangedEvent(participantIds(conversation)));
-        return toResponse(conversation);
+        return toResponse(conversation, userId);
     }
 
     /** Deleting a request removes the whole pending conversation; the sender may send a new request later. */
@@ -246,6 +266,26 @@ public class MessageService {
         messageRepository.deleteByConversationId(conversationId);
         conversationRepository.delete(conversation);
         eventPublisher.publishEvent(new ConversationChangedEvent(participantIds));
+    }
+
+    /** Restricting moves an existing 1:1 chat into the restrictor's requests; unrestricting moves it back (if they follow them). */
+    @Transactional
+    public void onRestrictionChanged(Long restrictorId, Long restrictedId, boolean restricted) {
+        conversationRepository.findOneToOneConversation(restrictorId, restrictedId).ifPresent(conversation -> {
+            if (restricted) {
+                conversation.setStatus(ConversationStatus.PENDING);
+                conversation.setInitiatorId(restrictedId);
+            } else if (conversation.getStatus() == ConversationStatus.PENDING
+                    && restrictedId.equals(conversation.getInitiatorId())
+                    && followRepository.existsByFollowerIdAndFolloweeIdAndStatus(
+                            restrictorId, restrictedId, FollowStatus.ACCEPTED)) {
+                conversation.setStatus(ConversationStatus.ACCEPTED);
+            } else {
+                return;
+            }
+            conversationRepository.save(conversation);
+            eventPublisher.publishEvent(new ConversationChangedEvent(List.of(restrictorId, restrictedId)));
+        });
     }
 
     private Conversation loadPendingRequestForRecipient(Long conversationId, Long userId) {
@@ -328,15 +368,30 @@ public class MessageService {
         return conversation.getLastMessageAt() != null ? conversation.getLastMessageAt() : conversation.getCreatedAt();
     }
 
-    private ConversationResponse toResponse(Conversation conversation) {
+    private ConversationResponse toResponse(Conversation conversation, Long viewerId) {
         List<UserSummary> participants = conversation.getParticipants().stream()
                 .map(UserSummary::from)
                 .sorted(Comparator.comparing(UserSummary::username))
                 .toList();
         return new ConversationResponse(conversation.getId(), conversation.isGroup(), participants,
                 conversation.getCreatedAt(),
-                conversation.getStatus(),
+                visibleStatus(conversation, viewerId),
                 conversation.getInitiatorId());
+    }
+
+    // A restricted user mustn't learn they're restricted: their view of a chat the other side
+    // restricted still reads as a normal accepted conversation (no "request sent" lockout).
+    private ConversationStatus visibleStatus(Conversation conversation, Long viewerId) {
+        if (conversation.getStatus() == ConversationStatus.PENDING
+                && !conversation.isGroup()
+                && viewerId.equals(conversation.getInitiatorId())
+                && conversation.getParticipants().stream()
+                        .map(User::getId)
+                        .filter(id -> !id.equals(viewerId))
+                        .anyMatch(id -> restrictionRepository.existsByRestrictorIdAndRestrictedId(id, viewerId))) {
+            return ConversationStatus.ACCEPTED;
+        }
+        return conversation.getStatus();
     }
 
     private MessageResponse toResponse(Message message, UserSummary sender, Long viewerId) {

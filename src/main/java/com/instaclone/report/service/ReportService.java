@@ -67,7 +67,8 @@ public class ReportService {
         Comment comment =
                 commentRepository.findById(commentId).orElseThrow(() -> new NotFoundException("Comment not found"));
         // Visibility follows the post the comment lives on; the "own content" rule follows the commenter.
-        if (!profileVisibilityService.isVisible(comment.getPost().getUser(), reporter)) {
+        if (!profileVisibilityService.isVisible(comment.getPost().getUser(), reporter)
+                || !comment.isVisibleTo(reporterId)) {
             throw new NotFoundException("Comment not found");
         }
         if (comment.getUser().getId().equals(reporterId)) {

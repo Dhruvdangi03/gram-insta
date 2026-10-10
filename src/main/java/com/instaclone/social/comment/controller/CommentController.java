@@ -44,6 +44,12 @@ public class CommentController {
         return commentService.getComments(postId, SecurityUtils.currentUserId(jwt), cursor, PageParams.clamp(limit));
     }
 
+    @PostMapping("/comments/{id}/approve")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void approveComment(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        commentService.approveComment(id, SecurityUtils.currentUserId(jwt));
+    }
+
     @DeleteMapping("/comments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteComment(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {

@@ -25,7 +25,7 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
   })
   const [showReport, setShowReport] = useState(false)
   const { follow, unfollow } = useFollowMutation(profile.username, profile)
-  const { block, unblock, mute, unmute } = useBlockMuteMutation(profile.username)
+  const { block, unblock, mute, unmute, restrict, unrestrict } = useBlockMuteMutation(profile.username)
   const isSelfPrivate = profile.viewerRelationship === 'SELF' && profile.isPrivate
   // Shares queryKeys.followRequests() with FollowRequestsPage, so accepting/declining a request
   // there keeps this count in sync without a separate invalidation.
@@ -113,6 +113,23 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                       loading={mute.isPending || unmute.isPending}
                     >
                       {profile.mutedByViewer ? 'Unmute' : 'Mute'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (profile.restrictedByViewer) {
+                          unrestrict.mutate()
+                        } else if (
+                          window.confirm(
+                            `Restrict ${profile.username}? Their new comments on your posts will only be visible to them until you approve, and their messages will go to your message requests. They won't be notified.`,
+                          )
+                        ) {
+                          restrict.mutate()
+                        }
+                      }}
+                      loading={restrict.isPending || unrestrict.isPending}
+                    >
+                      {profile.restrictedByViewer ? 'Unrestrict' : 'Restrict'}
                     </Button>
                     <Button
                       variant="secondary"

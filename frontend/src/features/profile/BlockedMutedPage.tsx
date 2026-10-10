@@ -48,6 +48,10 @@ export function BlockedMutedPage() {
   const queryClient = useQueryClient()
   const blocked = useQuery({ queryKey: queryKeys.blockedUsers(), queryFn: () => restrictionsApi.getBlockedUsers() })
   const muted = useQuery({ queryKey: queryKeys.mutedUsers(), queryFn: () => restrictionsApi.getMutedUsers() })
+  const restricted = useQuery({
+    queryKey: queryKeys.restrictedUsers(),
+    queryFn: () => restrictionsApi.getRestrictedUsers(),
+  })
 
   // Block/mute changes what feeds return, so a plain list update isn't enough.
   const invalidateAfterChange = () => {
@@ -58,6 +62,14 @@ export function BlockedMutedPage() {
   }
   const unblock = useMutation({ mutationFn: restrictionsApi.unblockUser, onSuccess: invalidateAfterChange })
   const unmute = useMutation({ mutationFn: restrictionsApi.unmuteUser, onSuccess: invalidateAfterChange })
+  const unrestrict = useMutation({
+    mutationFn: restrictionsApi.unrestrictUser,
+    onSuccess: () => {
+      invalidateAfterChange()
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.messageRequests() })
+    },
+  })
 
   return (
     <div className={styles.page}>
@@ -65,7 +77,7 @@ export function BlockedMutedPage() {
         <Link to="/accounts/edit" className={styles.backButton} aria-label="Back">
           <Icon name="back" />
         </Link>
-        <h1 className={styles.title}>Blocked &amp; muted</h1>
+        <h1 className={styles.title}>Blocked, muted &amp; restricted</h1>
       </header>
 
       <h2 className={styles.username}>Blocked accounts</h2>
@@ -85,6 +97,18 @@ export function BlockedMutedPage() {
         <p className={styles.empty}>You haven&apos;t muted anyone.</p>
       ) : (
         <UserRows users={muted.data} actionLabel="Unmute" onAction={(u) => unmute.mutate(u)} disabled={unmute.isPending} />
+      )}
+
+      <h2 className={styles.username}>Restricted accounts</h2>
+      {!restricted.data || restricted.data.length === 0 ? (
+        <p className={styles.empty}>You haven&apos;t restricted anyone.</p>
+      ) : (
+        <UserRows
+          users={restricted.data}
+          actionLabel="Unrestrict"
+          onAction={(u) => unrestrict.mutate(u)}
+          disabled={unrestrict.isPending}
+        />
       )}
     </div>
   )

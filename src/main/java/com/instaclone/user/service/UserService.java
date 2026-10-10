@@ -8,6 +8,7 @@ import com.instaclone.notification.service.FollowRequestNotificationCleaner;
 import com.instaclone.post.repository.PostRepository;
 import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.social.mute.repository.UserMuteRepository;
+import com.instaclone.social.restrict.repository.UserRestrictionRepository;
 import com.instaclone.social.follow.dto.FollowUserRow;
 import com.instaclone.social.follow.enums.FollowStatus;
 import com.instaclone.social.follow.repository.FollowRepository;
@@ -34,6 +35,7 @@ public class UserService {
     private final FollowRequestNotificationCleaner followRequestNotifications;
     private final UserBlockRepository blockRepository;
     private final UserMuteRepository muteRepository;
+    private final UserRestrictionRepository restrictionRepository;
 
     public UserService(
             UserRepository userRepository,
@@ -42,7 +44,8 @@ public class UserService {
             ProfileVisibilityService profileVisibilityService,
             FollowRequestNotificationCleaner followRequestNotifications,
             UserBlockRepository blockRepository,
-            UserMuteRepository muteRepository) {
+            UserMuteRepository muteRepository,
+            UserRestrictionRepository restrictionRepository) {
         this.userRepository = userRepository;
         this.followRepository = followRepository;
         this.postRepository = postRepository;
@@ -50,6 +53,7 @@ public class UserService {
         this.followRequestNotifications = followRequestNotifications;
         this.blockRepository = blockRepository;
         this.muteRepository = muteRepository;
+        this.restrictionRepository = restrictionRepository;
     }
 
     public User findByUsernameOrThrow(String username) {
@@ -189,9 +193,11 @@ public class UserService {
         ViewerRelationship relationship = ViewerRelationship.NOT_FOLLOWING;
         boolean blockedByViewer = false;
         boolean mutedByViewer = false;
+        boolean restrictedByViewer = false;
         if (viewerId != null) {
             blockedByViewer = blockRepository.existsByBlockerIdAndBlockedId(viewerId, target.getId());
             mutedByViewer = muteRepository.existsByMuterIdAndMutedId(viewerId, target.getId());
+            restrictedByViewer = restrictionRepository.existsByRestrictorIdAndRestrictedId(viewerId, target.getId());
             if (viewerId.equals(target.getId())) {
                 relationship = ViewerRelationship.SELF;
             } else {
@@ -218,6 +224,7 @@ public class UserService {
                 followingCount,
                 relationship,
                 blockedByViewer,
-                mutedByViewer);
+                mutedByViewer,
+                restrictedByViewer);
     }
 }

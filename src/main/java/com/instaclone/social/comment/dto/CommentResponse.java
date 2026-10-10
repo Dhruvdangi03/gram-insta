@@ -10,4 +10,6 @@ public record CommentResponse(
         Long parentCommentId,
         long likeCount,
         boolean likedByViewer,
-        Instant createdAt) {}
+        Instant createdAt,
+        /** True only for the post owner viewing a restricted user's not-yet-approved comment. */
+        boolean pendingApproval) {}

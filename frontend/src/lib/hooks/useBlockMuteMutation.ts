@@ -19,6 +19,8 @@ export function useBlockMuteMutation(username: string) {
     queryClient.invalidateQueries({ queryKey: queryKeys.suggestions() })
     queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() })
     queryClient.invalidateQueries({ queryKey: queryKeys.mutedUsers() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.restrictedUsers() })
+    queryClient.invalidateQueries({ queryKey: ['comments'] })
     queryClient.invalidateQueries({ queryKey: queryKeys.conversations() })
     queryClient.invalidateQueries({ queryKey: queryKeys.messageRequests() })
   }
@@ -28,5 +30,7 @@ export function useBlockMuteMutation(username: string) {
     unblock: useMutation({ mutationFn: () => restrictionsApi.unblockUser(username), onSuccess: refresh }),
     mute: useMutation({ mutationFn: () => restrictionsApi.muteUser(username), onSuccess: refresh }),
     unmute: useMutation({ mutationFn: () => restrictionsApi.unmuteUser(username), onSuccess: refresh }),
+    restrict: useMutation({ mutationFn: () => restrictionsApi.restrictUser(username), onSuccess: refresh }),
+    unrestrict: useMutation({ mutationFn: () => restrictionsApi.unrestrictUser(username), onSuccess: refresh }),
   }
 }

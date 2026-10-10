@@ -99,9 +99,21 @@ function CommentRow({
     mutationFn: () => commentsApi.deleteComment(comment.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.comments(postId) })
-      onCommentDeleted?.(1 + (replies?.length ?? 0))
+      // A comment still awaiting approval was never counted, so removing it doesn't change the count.
+      if (!comment.pendingApproval) onCommentDeleted?.(1 + (replies?.length ?? 0))
     },
     onError: () => window.alert('Something went wrong deleting this comment. Please try again.'),
+  })
+
+  const approveMutation = useMutation({
+    mutationFn: () => commentsApi.approveComment(comment.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.comments(postId) })
+      // Approving makes the comment count; refetch whatever post data is cached.
+      queryClient.invalidateQueries({ queryKey: queryKeys.posts() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.feed() })
+    },
+    onError: () => window.alert('Something went wrong approving this comment. Please try again.'),
   })
 
   // Comments (unlike posts) are only ever cached under one key — this postId's comment list — so
@@ -164,7 +176,27 @@ function CommentRow({
           >
             Reply
           </button>
-          {user?.username === comment.author.username ? (
+          {comment.pendingApproval ? (
+            <>
+              <span className={styles.timestamp}>Restricted — only visible to them until you approve</span>
+              <button
+                type="button"
+                className={styles.replyButton}
+                onClick={() => approveMutation.mutate()}
+                disabled={approveMutation.isPending}
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                className={styles.replyButton}
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+              >
+                Delete
+              </button>
+            </>
+          ) : user?.username === comment.author.username ? (
             <button
               type="button"
               className={styles.replyButton}
