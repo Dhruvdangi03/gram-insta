@@ -19,6 +19,22 @@ export function getConversations(cursor?: string, limit?: number) {
   return apiFetch<CursorPage<Conversation>>(`/conversations${buildQuery({ cursor, limit })}`)
 }
 
+export function getMessageRequests(cursor?: string, limit?: number) {
+  return apiFetch<CursorPage<Conversation>>(`/conversations/requests${buildQuery({ cursor, limit })}`)
+}
+
+export function getMessageRequestCount() {
+  return apiFetch<{ count: number }>('/conversations/requests/count')
+}
+
+export function acceptMessageRequest(conversationId: number) {
+  return apiFetch<Conversation>(`/conversations/${conversationId}/accept`, { method: 'POST' })
+}
+
+export function declineMessageRequest(conversationId: number) {
+  return apiFetch<void>(`/conversations/${conversationId}/request`, { method: 'DELETE' })
+}
+
 export function sendMessage(conversationId: number, body: SendMessageRequest) {
   return apiFetch<Message>(`/conversations/${conversationId}/messages`, { method: 'POST', body })
 }

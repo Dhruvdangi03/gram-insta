@@ -30,12 +30,24 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             nativeQuery = true)
     Optional<Conversation> findOneToOneConversation(@Param("userIdA") Long userIdA, @Param("userIdB") Long userIdB);
 
-    // Ordered by last_message_at (falling back to created_at for a conversation with no messages
-    // yet), same keyset-pagination shape as every other list in this codebase — see MessageService.
+    // Inbox = accepted chats, plus pending requests the viewer themself started (so a sender still
+    // sees the chat they opened). Ordered by last_message_at (falling back to created_at for a
+    // conversation with no messages yet), same keyset-pagination shape as every other list here.
+    String INBOX_FILTER =
+            "AND (c.request_status = 'ACCEPTED' OR c.initiator_id = :userId) ";
+
+    // Requests = pending chats someone else started, minus anyone the viewer has a block with.
+    String REQUESTS_FILTER =
+            "AND c.request_status = 'PENDING' AND c.initiator_id IS NOT NULL AND c.initiator_id <> :userId "
+                    + "AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE "
+                    + "(b.blocker_id = :userId AND b.blocked_id = c.initiator_id) "
+                    + "OR (b.blocker_id = c.initiator_id AND b.blocked_id = :userId)) ";
+
     @Query(
             value =
                     "SELECT c.* FROM conversations c JOIN conversation_participants cp ON cp.conversation_id = c.id "
                             + "WHERE cp.user_id = :userId "
+                            + INBOX_FILTER
                             + "ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT :limit",
             nativeQuery = true)
     List<Conversation> findFirstPageByParticipantId(@Param("userId") Long userId, @Param("limit") int limit);
@@ -44,6 +56,7 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             value =
                     "SELECT c.* FROM conversations c JOIN conversation_participants cp ON cp.conversation_id = c.id "
                             + "WHERE cp.user_id = :userId "
+                            + INBOX_FILTER
                             + "AND (COALESCE(c.last_message_at, c.created_at), c.id) < (:cursorTimestamp, :cursorId) "
                             + "ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT :limit",
             nativeQuery = true)
@@ -52,4 +65,35 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
             @Param("cursorTimestamp") Instant cursorTimestamp,
             @Param("cursorId") Long cursorId,
             @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT c.* FROM conversations c JOIN conversation_participants cp ON cp.conversation_id = c.id "
+                            + "WHERE cp.user_id = :userId "
+                            + REQUESTS_FILTER
+                            + "ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Conversation> findFirstPageOfRequests(@Param("userId") Long userId, @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT c.* FROM conversations c JOIN conversation_participants cp ON cp.conversation_id = c.id "
+                            + "WHERE cp.user_id = :userId "
+                            + REQUESTS_FILTER
+                            + "AND (COALESCE(c.last_message_at, c.created_at), c.id) < (:cursorTimestamp, :cursorId) "
+                            + "ORDER BY COALESCE(c.last_message_at, c.created_at) DESC, c.id DESC LIMIT :limit",
+            nativeQuery = true)
+    List<Conversation> findPageOfRequestsAfterCursor(
+            @Param("userId") Long userId,
+            @Param("cursorTimestamp") Instant cursorTimestamp,
+            @Param("cursorId") Long cursorId,
+            @Param("limit") int limit);
+
+    @Query(
+            value =
+                    "SELECT COUNT(*) FROM conversations c JOIN conversation_participants cp ON cp.conversation_id = c.id "
+                            + "WHERE cp.user_id = :userId "
+                            + REQUESTS_FILTER,
+            nativeQuery = true)
+    long countRequests(@Param("userId") Long userId);
 }

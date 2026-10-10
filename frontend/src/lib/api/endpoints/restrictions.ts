@@ -26,3 +26,15 @@ export function getBlockedUsers(limit?: number) {
 export function getMutedUsers(limit?: number) {
   return apiFetch<UserSummary[]>(`/users/me/muted${buildQuery({ limit })}`)
 }
+
+export function restrictUser(username: string) {
+  return apiFetch<void>(`${userPath(username)}/restrict`, { method: 'POST' })
+}
+
+export function unrestrictUser(username: string) {
+  return apiFetch<void>(`${userPath(username)}/restrict`, { method: 'DELETE' })
+}
+
+export function getRestrictedUsers(limit?: number) {
+  return apiFetch<UserSummary[]>(`/users/me/restricted${buildQuery({ limit })}`)
+}

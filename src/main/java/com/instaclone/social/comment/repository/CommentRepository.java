@@ -29,18 +29,29 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     List<Comment> findByUserIdAndPostIdIn(Long userId, List<Long> postIds);
 
+    @Query("select count(c) from Comment c where c.parent.id = :parentId and c.approved = true")
+    long countApprovedRepliesByParentId(@Param("parentId") Long parentId);
+
+    // Unapproved (restricted-user) comments are visible only to their author and the post owner.
+    // Filtered in SQL, not after the fetch, so pages stay full and the cursor stays correct.
     @Query(
-            value = "SELECT * FROM comments WHERE post_id = :postId ORDER BY created_at ASC, id ASC LIMIT :limit",
+            value = "SELECT c.* FROM comments c JOIN posts p ON p.id = c.post_id WHERE c.post_id = :postId "
+                    + "AND (c.approved OR c.user_id = :viewerId OR p.user_id = :viewerId) "
+                    + "ORDER BY c.created_at ASC, c.id ASC LIMIT :limit",
             nativeQuery = true)
-    List<Comment> findFirstPageByPostId(@Param("postId") Long postId, @Param("limit") int limit);
+    List<Comment> findFirstPageByPostId(
+            @Param("postId") Long postId, @Param("viewerId") Long viewerId, @Param("limit") int limit);
 
     @Query(
             value =
-                    "SELECT * FROM comments WHERE post_id = :postId AND (created_at, id) > (:cursorCreatedAt, :cursorId) "
-                            + "ORDER BY created_at ASC, id ASC LIMIT :limit",
+                    "SELECT c.* FROM comments c JOIN posts p ON p.id = c.post_id WHERE c.post_id = :postId "
+                            + "AND (c.approved OR c.user_id = :viewerId OR p.user_id = :viewerId) "
+                            + "AND (c.created_at, c.id) > (:cursorCreatedAt, :cursorId) "
+                            + "ORDER BY c.created_at ASC, c.id ASC LIMIT :limit",
             nativeQuery = true)
     List<Comment> findPageByPostIdAfterCursor(
             @Param("postId") Long postId,
+            @Param("viewerId") Long viewerId,
             @Param("cursorCreatedAt") Instant cursorCreatedAt,
             @Param("cursorId") Long cursorId,
             @Param("limit") int limit);

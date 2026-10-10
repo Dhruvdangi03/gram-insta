@@ -105,3 +105,23 @@
     display: none;
   }
 }
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid transparent;
+}
+
+.tabActive {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-text-primary);
+}

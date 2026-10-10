@@ -41,6 +41,7 @@ export interface UserProfile {
   viewerRelationship: ViewerRelationship
   blockedByViewer: boolean
   mutedByViewer: boolean
+  restrictedByViewer: boolean
 }
 
 export interface AuthTokens {
@@ -95,6 +96,8 @@ export interface Comment {
   likeCount: number
   likedByViewer: boolean
   createdAt: string
+  /** True only for the post owner viewing a restricted user's comment that still needs approval. */
+  pendingApproval: boolean
 }
 
 export type FollowStatus = 'PENDING' | 'ACCEPTED'
@@ -171,6 +174,10 @@ export interface Conversation {
   group: boolean
   participants: UserSummary[]
   createdAt: string
+  /** PENDING = a message request the recipient hasn't accepted; the inbox/requests lists split on this. */
+  status: 'PENDING' | 'ACCEPTED'
+  /** Who started the conversation (only meaningful while PENDING). */
+  initiatorId: number | null
 }
 
 export interface Message {

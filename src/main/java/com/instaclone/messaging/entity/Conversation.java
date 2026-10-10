@@ -1,8 +1,11 @@
 package com.instaclone.messaging.entity;
 
+import com.instaclone.messaging.enums.ConversationStatus;
 import com.instaclone.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -39,6 +42,15 @@ public class Conversation {
     // ordering and its cursor — see MessageService.sendMessage / ConversationRepository.
     @Column(name = "last_message_at")
     private Instant lastMessageAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "request_status", nullable = false, length = 10)
+    private ConversationStatus status = ConversationStatus.ACCEPTED;
+
+    // Who started the conversation; only meaningful while status is PENDING (the recipient is
+    // everyone else). Null for pre-V19 rows and if the initiating user is later deleted.
+    @Column(name = "initiator_id")
+    private Long initiatorId;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

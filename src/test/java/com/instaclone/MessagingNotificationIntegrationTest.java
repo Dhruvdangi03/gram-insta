@@ -74,6 +74,8 @@ class MessagingNotificationIntegrationTest {
     void messagingWorksLiveAndOverRestFallback() throws Exception {
         String aliceToken = register("msg_alice", "msg_alice@example.com");
         String bobToken = register("msg_bob", "msg_bob@example.com");
+        // Bob follows Alice so her conversation lands in his inbox rather than his message requests.
+        rest.exchange("/users/msg_alice/follow", HttpMethod.POST, new HttpEntity<>(null, bearer(bobToken)), Map.class);
 
         ResponseEntity<Map> convoResponse = rest.exchange(
                 "/conversations",

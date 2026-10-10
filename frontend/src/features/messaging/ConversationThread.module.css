@@ -111,3 +111,38 @@
 .sendButton:disabled {
   opacity: 0.3;
 }
+
+.requestBar {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.requestText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  flex: 1;
+}
+
+.requestActions {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-5, 20px);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+
+.requestDanger {
+  color: var(--color-danger);
+}
+
+.requestAccept {
+  color: var(--color-accent);
+}
+
+.requestAccept:disabled {
+  opacity: 0.3;
+}

@@ -20,6 +20,13 @@ class MessagePushPublisher {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    void onConversationChanged(ConversationChangedEvent event) {
+        for (Long userId : event.userIds()) {
+            messagingTemplate.convertAndSendToUser(String.valueOf(userId), "/queue/conversations-changed", "changed");
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void onMessageSent(MessageSentEvent event) {
         for (Long recipientId : event.recipientIds()) {
             messagingTemplate.convertAndSendToUser(String.valueOf(recipientId), "/queue/messages", event.response());

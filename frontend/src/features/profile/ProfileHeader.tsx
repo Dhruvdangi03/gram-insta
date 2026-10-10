@@ -1,11 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Avatar } from '@/components/Avatar'
 import { Button } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import { ReportSheet } from '@/components/ReportSheet'
 import { VerifiedBadge } from '@/components/VerifiedBadge'
+import * as messagingApi from '@/lib/api/endpoints/messaging'
 import * as usersApi from '@/lib/api/endpoints/users'
 import type { UserProfile } from '@/lib/api/types'
 import { useBlockMuteMutation } from '@/lib/hooks/useBlockMuteMutation'
@@ -15,9 +16,16 @@ import styles from './ProfileHeader.module.css'
 
 export function ProfileHeader({ profile }: { profile: UserProfile }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  // Opens (or creates) the 1:1 chat. For someone who doesn't follow you back it starts as a
+  // message request on their side; the sender lands in the thread either way.
+  const startChat = useMutation({
+    mutationFn: () => messagingApi.createConversation({ participantUsernames: [profile.username] }),
+    onSuccess: (conversation) => navigate(`/direct/inbox/${conversation.id}`),
+  })
   const [showReport, setShowReport] = useState(false)
   const { follow, unfollow } = useFollowMutation(profile.username, profile)
-  const { block, unblock, mute, unmute } = useBlockMuteMutation(profile.username)
+  const { block, unblock, mute, unmute, restrict, unrestrict } = useBlockMuteMutation(profile.username)
   const isSelfPrivate = profile.viewerRelationship === 'SELF' && profile.isPrivate
   // Shares queryKeys.followRequests() with FollowRequestsPage, so accepting/declining a request
   // there keeps this count in sync without a separate invalidation.
@@ -76,18 +84,28 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                     <Button variant="secondary" onClick={() => unfollow.mutate()} loading={unfollow.isPending}>
                       Following
                     </Button>
-                    <Link to="/direct/inbox">
-                      <Button variant="secondary">Message</Button>
-                    </Link>
+                    <Button variant="secondary" onClick={() => startChat.mutate()} loading={startChat.isPending}>
+                      Message
+                    </Button>
                   </>
                 ) : profile.viewerRelationship === 'REQUESTED' ? (
-                  <Button variant="secondary" onClick={() => unfollow.mutate()} loading={unfollow.isPending}>
-                    Requested
-                  </Button>
+                  <>
+                    <Button variant="secondary" onClick={() => unfollow.mutate()} loading={unfollow.isPending}>
+                      Requested
+                    </Button>
+                    <Button variant="secondary" onClick={() => startChat.mutate()} loading={startChat.isPending}>
+                      Message
+                    </Button>
+                  </>
                 ) : (
-                  <Button onClick={() => follow.mutate()} loading={follow.isPending}>
-                    Follow
-                  </Button>
+                  <>
+                    <Button onClick={() => follow.mutate()} loading={follow.isPending}>
+                      Follow
+                    </Button>
+                    <Button variant="secondary" onClick={() => startChat.mutate()} loading={startChat.isPending}>
+                      Message
+                    </Button>
+                  </>
                 )}
                     <Button
                       variant="secondary"
@@ -95,6 +113,23 @@ export function ProfileHeader({ profile }: { profile: UserProfile }) {
                       loading={mute.isPending || unmute.isPending}
                     >
                       {profile.mutedByViewer ? 'Unmute' : 'Mute'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (profile.restrictedByViewer) {
+                          unrestrict.mutate()
+                        } else if (
+                          window.confirm(
+                            `Restrict ${profile.username}? Their new comments on your posts will only be visible to them until you approve, and their messages will go to your message requests. They won't be notified.`,
+                          )
+                        ) {
+                          restrict.mutate()
+                        }
+                      }}
+                      loading={restrict.isPending || unrestrict.isPending}
+                    >
+                      {profile.restrictedByViewer ? 'Unrestrict' : 'Restrict'}
                     </Button>
                     <Button
                       variant="secondary"

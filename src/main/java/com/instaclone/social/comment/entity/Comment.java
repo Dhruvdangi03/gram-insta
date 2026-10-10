@@ -48,6 +48,15 @@ public class Comment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    // false = a restricted user's comment awaiting the post owner's approval (see V21).
+    @Column(nullable = false)
+    private boolean approved = true;
+
+    /** Unapproved comments are visible only to their author and the post owner. */
+    public boolean isVisibleTo(Long viewerId) {
+        return approved || user.getId().equals(viewerId) || post.getUser().getId().equals(viewerId);
+    }
+
     public boolean isReply() {
         return parent != null;
     }

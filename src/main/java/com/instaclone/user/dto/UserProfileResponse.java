@@ -16,4 +16,5 @@ public record UserProfileResponse(
         long followingCount,
         ViewerRelationship viewerRelationship,
         boolean blockedByViewer,
-        boolean mutedByViewer) {}
+        boolean mutedByViewer,
+        boolean restrictedByViewer) {}
