@@ -25,6 +25,10 @@ export const queryKeys = {
   highlightDetail: (id: number) => [...queryKeys.stories(), 'highlights', 'detail', id] as const,
   notifications: () => ['notifications'] as const,
   conversations: () => ['conversations'] as const,
+  // Deliberately NOT nested under conversations(): invalidating the inbox shouldn't refetch these
+  // (and vice versa) — the handlers invalidate both explicitly when a request changes state.
+  messageRequests: () => ['messageRequests'] as const,
+  messageRequestCount: () => ['messageRequests', 'count'] as const,
   conversation: (id: number) => [...queryKeys.conversations(), id] as const,
   messages: (conversationId: number) => [...queryKeys.conversation(conversationId), 'messages'] as const,
   hashtag: (tag: string) => ['hashtags', tag] as const,

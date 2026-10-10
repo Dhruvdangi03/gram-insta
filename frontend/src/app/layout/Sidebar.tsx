@@ -4,6 +4,7 @@ import { Avatar } from '@/components/Avatar'
 import { Icon, type IconName } from '@/components/Icon'
 import { Wordmark } from '@/components/Wordmark'
 import { useAuth } from '@/contexts/useAuth'
+import { MessagesBadge } from '@/features/messaging/MessagesBadge'
 import { NotificationBadge } from '@/features/notifications/NotificationBadge'
 import { SearchPanel } from '@/features/search/SearchPanel'
 import styles from './Sidebar.module.css'
@@ -43,7 +44,13 @@ export function Sidebar() {
           >
             {({ isActive }: { isActive: boolean }) => (
               <>
-                <Icon name={item.icon} variant={isActive ? 'filled' : 'outline'} />
+                {item.to === '/direct/inbox' ? (
+                  <MessagesBadge>
+                    <Icon name={item.icon} variant={isActive ? 'filled' : 'outline'} />
+                  </MessagesBadge>
+                ) : (
+                  <Icon name={item.icon} variant={isActive ? 'filled' : 'outline'} />
+                )}
                 <span className={styles.navLabel}>{item.label}</span>
               </>
             )}

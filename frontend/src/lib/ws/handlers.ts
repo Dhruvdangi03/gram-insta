@@ -49,6 +49,14 @@ export function registerHandlers(stomp: Client, queryClient: QueryClient) {
     const message = JSON.parse(frame.body) as Message
     prependToFirstPage(queryClient, queryKeys.messages(message.conversationId), message)
     queryClient.invalidateQueries({ queryKey: queryKeys.conversations() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.messageRequests() })
+  })
+
+  // A conversation was created, accepted or declined (message requests) — refetch both folders
+  // and the Requests badge count.
+  stomp.subscribe('/user/queue/conversations-changed', () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.conversations() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.messageRequests() })
   })
 
   stomp.subscribe('/user/queue/errors', (frame: IMessage) => {

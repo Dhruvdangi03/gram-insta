@@ -10,7 +10,10 @@ import com.instaclone.messaging.dto.CreateConversationRequest;
 import com.instaclone.messaging.dto.MessageResponse;
 import com.instaclone.messaging.dto.SendMessageRequest;
 import com.instaclone.messaging.entity.Conversation;
+import com.instaclone.messaging.dto.MessageRequestCountResponse;
 import com.instaclone.messaging.entity.Message;
+import com.instaclone.messaging.enums.ConversationStatus;
+import com.instaclone.messaging.event.ConversationChangedEvent;
 import com.instaclone.messaging.event.MessageSentEvent;
 import com.instaclone.messaging.repository.ConversationRepository;
 import com.instaclone.messaging.repository.MessageRepository;
@@ -18,6 +21,8 @@ import com.instaclone.post.dto.PostResponse;
 import com.instaclone.post.entity.Post;
 import com.instaclone.post.repository.PostRepository;
 import com.instaclone.post.service.PostService;
+import com.instaclone.social.follow.enums.FollowStatus;
+import com.instaclone.social.follow.repository.FollowRepository;
 import com.instaclone.user.dto.UserSummary;
 import com.instaclone.social.block.repository.UserBlockRepository;
 import com.instaclone.user.entity.User;
@@ -47,6 +52,7 @@ public class MessageService {
 
     private static final int MAX_CONTENT_LENGTH = 1000;
     private static final int MAX_MEDIA_URL_LENGTH = 2048;
+    private static final int MAX_MESSAGES_BEFORE_ACCEPT = 1;
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -56,6 +62,7 @@ public class MessageService {
     private final PostRepository postRepository;
     private final PostService postService;
     private final ProfileVisibilityService profileVisibilityService;
+    private final FollowRepository followRepository;
 
     public MessageService(
             ConversationRepository conversationRepository,
@@ -65,7 +72,8 @@ public class MessageService {
             UserBlockRepository blockRepository,
             PostRepository postRepository,
             PostService postService,
-            ProfileVisibilityService profileVisibilityService) {
+            ProfileVisibilityService profileVisibilityService,
+            FollowRepository followRepository) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
@@ -74,6 +82,7 @@ public class MessageService {
         this.postRepository = postRepository;
         this.postService = postService;
         this.profileVisibilityService = profileVisibilityService;
+        this.followRepository = followRepository;
     }
 
     @Transactional
@@ -101,9 +110,21 @@ public class MessageService {
             // pass the lookup below before either has committed its INSERT — see the repository
             // method's Javadoc. Held for the rest of this transaction, released on commit/rollback.
             conversationRepository.acquireOneToOneConversationLock(Math.min(creatorId, otherId), Math.max(creatorId, otherId));
+            // A first contact from someone the recipient doesn't follow is a message request.
+            boolean recipientFollowsCreator = followRepository.existsByFollowerIdAndFolloweeIdAndStatus(
+                    otherId, creatorId, FollowStatus.ACCEPTED);
             conversation = conversationRepository
                     .findOneToOneConversation(creatorId, otherId)
-                    .orElseGet(() -> createConversation(creator, others, false));
+                    .orElseGet(() -> {
+                        Conversation created = createConversation(creator, others, false);
+                        if (!recipientFollowsCreator) {
+                            created.setStatus(ConversationStatus.PENDING);
+                            created.setInitiatorId(creatorId);
+                            created = conversationRepository.save(created);
+                        }
+                        eventPublisher.publishEvent(new ConversationChangedEvent(List.of(creatorId, otherId)));
+                        return created;
+                    });
         } else {
             conversation = createConversation(creator, others, true);
         }
@@ -143,6 +164,20 @@ public class MessageService {
                     .forEach(otherId -> assertNotBlocked(senderId, otherId));
         }
 
+        boolean accepted = false;
+        if (conversation.getStatus() == ConversationStatus.PENDING) {
+            if (senderId.equals(conversation.getInitiatorId())) {
+                // Like Instagram: one message to introduce yourself, then wait for acceptance.
+                if (messageRepository.countByConversationId(conversationId) >= MAX_MESSAGES_BEFORE_ACCEPT) {
+                    throw new ForbiddenException("Wait for them to accept your request");
+                }
+            } else {
+                // The recipient replying is an implicit accept.
+                conversation.setStatus(ConversationStatus.ACCEPTED);
+                accepted = true;
+            }
+        }
+
         Message message = new Message();
         message.setConversation(conversation);
         message.setSender(sender);
@@ -162,6 +197,9 @@ public class MessageService {
 
         conversation.setLastMessageAt(message.getCreatedAt());
         conversationRepository.save(conversation);
+        if (accepted) {
+            eventPublisher.publishEvent(new ConversationChangedEvent(participantIds(conversation)));
+        }
 
         MessageResponse response = toResponse(message, UserSummary.from(sender), senderId);
         // Every participant, including the sender — a STOMP-originated sender otherwise never
@@ -170,6 +208,61 @@ public class MessageService {
         List<Long> recipientIds = conversation.getParticipants().stream().map(User::getId).toList();
         eventPublisher.publishEvent(new MessageSentEvent(response, recipientIds));
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public CursorPage<ConversationResponse> listRequests(Long userId, String cursor, int limit) {
+        Cursor decoded = cursor == null ? null : Cursor.decode(cursor);
+        List<Conversation> rows = decoded == null
+                ? conversationRepository.findFirstPageOfRequests(userId, limit + 1)
+                : conversationRepository.findPageOfRequestsAfterCursor(
+                        userId, decoded.createdAt(), decoded.id(), limit + 1);
+
+        CursorPage<Conversation> page =
+                CursorPage.of(rows, limit, c -> new Cursor(lastActivity(c), c.getId()).encode());
+        List<ConversationResponse> items = page.items().stream().map(this::toResponse).toList();
+        return new CursorPage<>(items, page.nextCursor(), page.hasMore());
+    }
+
+    @Transactional(readOnly = true)
+    public MessageRequestCountResponse countRequests(Long userId) {
+        return new MessageRequestCountResponse(conversationRepository.countRequests(userId));
+    }
+
+    @Transactional
+    public ConversationResponse acceptRequest(Long conversationId, Long userId) {
+        Conversation conversation = loadPendingRequestForRecipient(conversationId, userId);
+        conversation.setStatus(ConversationStatus.ACCEPTED);
+        conversation = conversationRepository.save(conversation);
+        eventPublisher.publishEvent(new ConversationChangedEvent(participantIds(conversation)));
+        return toResponse(conversation);
+    }
+
+    /** Deleting a request removes the whole pending conversation; the sender may send a new request later. */
+    @Transactional
+    public void declineRequest(Long conversationId, Long userId) {
+        Conversation conversation = loadPendingRequestForRecipient(conversationId, userId);
+        List<Long> participantIds = participantIds(conversation);
+        messageRepository.deleteByConversationId(conversationId);
+        conversationRepository.delete(conversation);
+        eventPublisher.publishEvent(new ConversationChangedEvent(participantIds));
+    }
+
+    private Conversation loadPendingRequestForRecipient(Long conversationId, Long userId) {
+        assertParticipant(conversationId, userId);
+        Conversation conversation =
+                conversationRepository.findById(conversationId).orElseThrow(() -> new NotFoundException("Conversation not found"));
+        if (conversation.getStatus() != ConversationStatus.PENDING) {
+            throw new BadRequestException("This conversation is not a message request");
+        }
+        if (userId.equals(conversation.getInitiatorId())) {
+            throw new ForbiddenException("You can't respond to your own message request");
+        }
+        return conversation;
+    }
+
+    private List<Long> participantIds(Conversation conversation) {
+        return conversation.getParticipants().stream().map(User::getId).toList();
     }
 
     @Transactional(readOnly = true)
@@ -240,7 +333,10 @@ public class MessageService {
                 .map(UserSummary::from)
                 .sorted(Comparator.comparing(UserSummary::username))
                 .toList();
-        return new ConversationResponse(conversation.getId(), conversation.isGroup(), participants, conversation.getCreatedAt());
+        return new ConversationResponse(conversation.getId(), conversation.isGroup(), participants,
+                conversation.getCreatedAt(),
+                conversation.getStatus(),
+                conversation.getInitiatorId());
     }
 
     private MessageResponse toResponse(Message message, UserSummary sender, Long viewerId) {

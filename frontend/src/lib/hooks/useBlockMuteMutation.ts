@@ -19,6 +19,8 @@ export function useBlockMuteMutation(username: string) {
     queryClient.invalidateQueries({ queryKey: queryKeys.suggestions() })
     queryClient.invalidateQueries({ queryKey: queryKeys.blockedUsers() })
     queryClient.invalidateQueries({ queryKey: queryKeys.mutedUsers() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.conversations() })
+    queryClient.invalidateQueries({ queryKey: queryKeys.messageRequests() })
   }
 
   return {

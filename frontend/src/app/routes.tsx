@@ -51,6 +51,11 @@ export const routes: RouteObject[] = [
         element: <DirectInboxPage />,
         children: [{ path: ':conversationId', element: <ConversationThread /> }],
       },
+      {
+        path: 'direct/requests',
+        element: <DirectInboxPage />,
+        children: [{ path: ':conversationId', element: <ConversationThread /> }],
+      },
       { path: 'p/:postId', element: <PostPage /> },
       { path: 'accounts/edit', element: <EditProfilePage /> },
       { path: 'accounts/insights', element: <InsightsPage /> },

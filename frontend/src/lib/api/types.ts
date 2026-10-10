@@ -171,6 +171,10 @@ export interface Conversation {
   group: boolean
   participants: UserSummary[]
   createdAt: string
+  /** PENDING = a message request the recipient hasn't accepted; the inbox/requests lists split on this. */
+  status: 'PENDING' | 'ACCEPTED'
+  /** Who started the conversation (only meaningful while PENDING). */
+  initiatorId: number | null
 }
 
 export interface Message {
