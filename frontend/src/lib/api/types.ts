@@ -179,6 +179,7 @@ export interface Message {
   sender: UserSummary
   content: string | null
   mediaUrl: string | null
+  sharedPost: Post | null
   createdAt: string
 }
 

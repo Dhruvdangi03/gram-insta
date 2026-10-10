@@ -4,6 +4,7 @@ import { Avatar } from '@/components/Avatar'
 import { CaptionText } from '@/components/CaptionText'
 import { Icon } from '@/components/Icon'
 import { PostOptionsMenu } from '@/components/PostOptionsMenu'
+import { SharePostModal } from '@/components/SharePostModal'
 import type { Post } from '@/lib/api/types'
 import { formatCount } from '@/lib/formatters/relativeTime'
 import { useLikeMutation } from '@/lib/hooks/useLikeMutation'
@@ -13,6 +14,7 @@ export function ReelItem({ post }: { post: Post }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [muted, setMuted] = useState(true)
+  const [showShareModal, setShowShareModal] = useState(false)
   const likeMutation = useLikeMutation(post.id, post.likedByViewer, post.likeCount)
   const media = post.media[0]
 
@@ -89,12 +91,19 @@ export function ReelItem({ post }: { post: Post }) {
             <Icon name="comment" size={28} />
             <span className={styles.count}>{formatCount(post.commentCount)}</span>
           </Link>
-          <button type="button" className={styles.actionButton} aria-label="Share">
+          <button
+            type="button"
+            className={styles.actionButton}
+            aria-label="Share"
+            onClick={() => setShowShareModal(true)}
+          >
             <Icon name="share" size={28} />
           </button>
           <PostOptionsMenu post={post} className={styles.actionButton} />
         </div>
       </div>
+
+      {showShareModal ? <SharePostModal post={post} onClose={() => setShowShareModal(false)} /> : null}
     </div>
   )
 }
