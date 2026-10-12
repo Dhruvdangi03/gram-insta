@@ -87,4 +87,10 @@ public class ConversationController {
             @AuthenticationPrincipal Jwt jwt) {
         return messageService.getHistory(id, SecurityUtils.currentUserId(jwt), cursor, PageParams.clamp(limit));
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void hideConversation(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        messageService.hideConversation(id, SecurityUtils.currentUserId(jwt));
+    }
 }

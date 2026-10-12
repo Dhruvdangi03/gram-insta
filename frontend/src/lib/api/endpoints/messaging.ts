@@ -42,3 +42,7 @@ export function sendMessage(conversationId: number, body: SendMessageRequest) {
 export function getMessages(conversationId: number, cursor?: string, limit?: number) {
   return apiFetch<CursorPage<Message>>(`/conversations/${conversationId}/messages${buildQuery({ cursor, limit })}`)
 }
+
+export function deleteConversation(id: number) {
+  return apiFetch<void>(`/conversations/${id}`, { method: 'DELETE' })
+}

@@ -1,9 +1,11 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ActionSheet } from '@/components/ActionSheet'
 import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import * as messagingApi from '@/lib/api/endpoints/messaging'
-import type { Conversation } from '@/lib/api/types'
+import type { Conversation, CursorPage } from '@/lib/api/types'
 import { formatRelativeTime } from '@/lib/formatters/relativeTime'
 import { useCursorInfiniteQuery } from '@/lib/hooks/useCursorInfiniteQuery'
 import { queryKeys } from '@/lib/queryKeys'
@@ -12,29 +14,123 @@ import { NewMessageModal } from './NewMessageModal'
 import { useOtherParticipants } from './useOtherParticipants'
 import styles from './DirectInboxPage.module.css'
 
+type ConversationsCache = { pages: CursorPage<Conversation>[]; pageParams: unknown[] }
+
 function ConversationRow({
   conversation,
   active,
   basePath,
+  canDelete,
 }: {
   conversation: Conversation
   active: boolean
   basePath: string
+  canDelete: boolean
 }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const others = useOtherParticipants(conversation)
   const names = others.map((p) => p.username).join(', ') || 'You'
+  const canLinkToProfile = others.length === 1
+
+  const [showSheet, setShowSheet] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const deleteMutation = useMutation({
+    mutationFn: () => messagingApi.deleteConversation(conversation.id),
+    onSuccess: () => {
+      queryClient.setQueryData<ConversationsCache>(queryKeys.conversations(), (data) =>
+        data
+          ? {
+              ...data,
+              pages: data.pages.map((page) => ({
+                ...page,
+                items: page.items.filter((c) => c.id !== conversation.id),
+              })),
+            }
+          : data,
+      )
+      if (active) navigate('/direct/inbox')
+    },
+    onError: () => window.alert('Something went wrong deleting this conversation. Please try again.'),
+  })
+
+  function goToThread() {
+    navigate(`${basePath}/${conversation.id}`)
+  }
+
+  const profilePath = `/${others[0]?.username}`
+
+  const avatar = canLinkToProfile ? (
+    <Link to={profilePath} className={styles.avatarLink} onClick={(e) => e.stopPropagation()}>
+      <Avatar src={others[0]?.profilePictureUrl} alt={names} size={44} />
+    </Link>
+  ) : (
+    <Avatar src={others[0]?.profilePictureUrl} alt={names} size={44} />
+  )
+
+  const username = canLinkToProfile ? (
+    <Link to={profilePath} className={styles.usernameLink} onClick={(e) => e.stopPropagation()}>
+      {names}
+    </Link>
+  ) : (
+    names
+  )
 
   return (
-    <Link
-      to={`${basePath}/${conversation.id}`}
+    <div
       className={[styles.row, active ? styles.rowActive : ''].join(' ')}
+      role="button"
+      tabIndex={0}
+      onClick={goToThread}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          goToThread()
+        }
+      }}
     >
-      <Avatar src={others[0]?.profilePictureUrl} alt={names} size={44} />
-      <div className={styles.rowText}>
-        <p className={styles.participants}>{names}</p>
-        <p className={styles.timestamp}>{formatRelativeTime(conversation.createdAt)}</p>
+      <div className={styles.rowIdentity}>
+        {avatar}
+        <div className={styles.rowText}>
+          <p className={styles.participants}>{username}</p>
+          <p className={styles.timestamp}>{formatRelativeTime(conversation.createdAt)}</p>
+        </div>
       </div>
-    </Link>
+      {canDelete ? (
+        <button
+          type="button"
+          className={styles.optionsButton}
+          aria-label="More options"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowSheet(true)
+          }}
+        >
+          <Icon name="options" />
+        </button>
+      ) : null}
+      {showSheet ? (
+        <ActionSheet
+          onClose={() => setShowSheet(false)}
+          actions={[{ label: 'Delete', onClick: () => setShowDeleteConfirm(true), destructive: true }]}
+        />
+      ) : null}
+      {showDeleteConfirm ? (
+        <ActionSheet
+          onClose={() => setShowDeleteConfirm(false)}
+          title="Delete conversation?"
+          message="This conversation will be removed from your inbox. The other person will still see it."
+          actions={[
+            {
+              label: deleteMutation.isPending ? 'Deleting…' : 'Delete',
+              onClick: () => deleteMutation.mutate(),
+              destructive: true,
+            },
+          ]}
+        />
+      ) : null}
+    </div>
   )
 }
 
@@ -78,6 +174,7 @@ export function DirectInboxPage() {
                 conversation={conversation}
                 active={String(conversation.id) === conversationId}
                 basePath={basePath}
+                canDelete={!isRequests}
               />
             ))
           )}

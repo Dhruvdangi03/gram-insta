@@ -93,8 +93,17 @@ export function ConversationThread() {
         <Link to="/direct/inbox" className={styles.backButton} aria-label="Back to messages">
           <Icon name="back" />
         </Link>
-        <Avatar src={others[0]?.profilePictureUrl} alt={names} size={32} />
-        <span className={styles.headerName}>{names}</span>
+        {others.length === 1 ? (
+          <Link to={`/${others[0].username}`} className={styles.headerIdentity}>
+            <Avatar src={others[0].profilePictureUrl} alt={names} size={32} />
+            <span className={styles.headerName}>{names}</span>
+          </Link>
+        ) : (
+          <>
+            <Avatar src={others[0]?.profilePictureUrl} alt={names} size={32} />
+            <span className={styles.headerName}>{names}</span>
+          </>
+        )}
       </header>
       <div className={styles.messages}>
         {orderedMessages.map((message) => {
